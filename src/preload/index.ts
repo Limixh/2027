@@ -21,6 +21,8 @@ const api: DesktopApi = {
     codexStatus: () => ipcRenderer.invoke('codex:status'),
     codexChat: (req: CliChatRequest) => ipcRenderer.invoke('codex:chat', req),
     codexAbort: (id: string) => ipcRenderer.invoke('codex:abort', id),
+    codexModels: () => ipcRenderer.invoke('codex:models'),
+    codexLogin: () => ipcRenderer.invoke('codex:login'),
     saveAttachment: (name: string, base64: string) => ipcRenderer.invoke('ai:saveAttachment', name, base64),
     onEvent: (cb: (ev: AiStreamEvent) => void) => {
       const listener = (_e: unknown, ev: AiStreamEvent): void => cb(ev)

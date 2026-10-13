@@ -47,7 +47,19 @@ function AttachmentChip({ a, onRemove }: { a: ChatAttachment; onRemove?: () => v
   )
 }
 
-function CodexSetup({ checking, status, onCheck }: { checking: boolean; status: CliStatus | null; onCheck: () => void }): React.JSX.Element {
+function CodexSetup({
+  checking,
+  status,
+  onCheck,
+  onLogin,
+  loggingIn
+}: {
+  checking: boolean
+  status: CliStatus | null
+  onCheck: () => void
+  onLogin: () => void
+  loggingIn: boolean
+}): React.JSX.Element {
   return (
     <Card className="mx-auto max-w-xl p-6">
       <div className="mb-4 flex items-center gap-3">
@@ -75,7 +87,13 @@ function CodexSetup({ checking, status, onCheck }: { checking: boolean; status: 
           <CopyCode code="npm install -g @openai/codex" />
         </Step>
         <Step n={3}>
-          Ardından şunu yaz ve Enter'a bas; tarayıcıda <b className="text-text">"Sign in with ChatGPT"</b> ile hesabına giriş yap:
+          ChatGPT hesabına giriş yap: aşağıdaki düğmeye bas, açılan tarayıcıda <b className="text-text">"Sign in with ChatGPT"</b> ile giriş yap.
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Button size="sm" disabled={loggingIn || !status?.installed} onClick={onLogin}>
+              {loggingIn ? 'Tarayıcıda giriş bekleniyor…' : "ChatGPT'ye giriş yap"}
+            </Button>
+            <span className="text-xs">ya da PowerShell'de:</span>
+          </div>
           <CopyCode code="codex login" />
         </Step>
         <Step n={4}>
@@ -327,6 +345,18 @@ export default function AiCoach(): React.JSX.Element {
   const [cli, setCli] = useState<CliStatus | null>(null)
   const [checking, setChecking] = useState(false)
   const [codexSt, setCodexSt] = useState<CliStatus | null>(null)
+  const [codexModels, setCodexModels] = useState<{ slug: string; name: string }[]>([])
+  const [loggingIn, setLoggingIn] = useState(false)
+  const codexLogin = async (): Promise<void> => {
+    if (!window.api) return
+    setLoggingIn(true)
+    toast('Tarayıcıda ChatGPT girişi açılıyor…', 'info')
+    const r = await window.api.ai.codexLogin()
+    setLoggingIn(false)
+    const st = await window.api.ai.codexStatus()
+    setCodexSt(st)
+    toast(st.loggedIn !== false && r.ok ? 'ChatGPT hesabı bağlandı' : 'Giriş tamamlanamadı, tekrar dene', st.loggedIn !== false && r.ok ? 'success' : 'error')
+  }
   const provider = isDesktop ? settings.aiProvider : 'api'
   const notReady =
     provider === 'cli'
@@ -380,7 +410,10 @@ export default function AiCoach(): React.JSX.Element {
   }, [])
   useEffect(() => {
     if (provider === 'cli') void checkCli()
-    if (provider === 'codex') void checkCodex()
+    if (provider === 'codex') {
+      void checkCodex()
+      void window.api?.ai.codexModels().then(setCodexModels)
+    }
   }, [provider, checkCli, checkCodex])
 
   /** Dosyayı uygulama klasörüne kaydedip bekleyen eklere ekler */
@@ -419,6 +452,10 @@ export default function AiCoach(): React.JSX.Element {
       if (ev.type === 'text') {
         setStream({ ...cur, text: cur.text + ev.text })
         return
+      }
+      const st0 = useStore.getState().data.settings
+      if (ev.type === 'done' && st0.aiProvider === 'codex' && ev.model && ev.model !== 'codex' && ev.model !== st0.codexModel) {
+        useStore.getState().updateSettings({ codexModel: ev.model })
       }
       const thread = useStore.getState().data.chats.find((c) => c.id === cur.threadId)
       if (thread) {
@@ -618,6 +655,26 @@ export default function AiCoach(): React.JSX.Element {
                 <option value="api">Claude (API anahtarı)</option>
               </select>
             )}
+            {provider === 'codex' && (
+              <>
+                <select
+                  className="input h-8 w-auto max-w-[150px] py-0 text-xs"
+                  value={settings.codexModel ?? ''}
+                  onChange={(e) => updateSettings({ codexModel: e.target.value })}
+                  title="ChatGPT modeli"
+                >
+                  <option value="">Otomatik</option>
+                  {codexModels.map((m) => (
+                    <option key={m.slug} value={m.slug}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                <Button size="sm" variant="ghost" disabled={loggingIn} onClick={() => void codexLogin()} title="ChatGPT hesabına giriş yap / hesabı değiştir">
+                  {loggingIn ? 'Giriş…' : 'Giriş'}
+                </Button>
+              </>
+            )}
             {provider !== 'codex' && (
             <select
               className="input h-8 w-auto py-0 text-xs"
@@ -658,6 +715,8 @@ export default function AiCoach(): React.JSX.Element {
                 <CodexSetup
                   checking={checking}
                   status={codexSt}
+                  loggingIn={loggingIn}
+                  onLogin={() => void codexLogin()}
                   onCheck={async () => {
                     const st = await checkCodex()
                     toast(

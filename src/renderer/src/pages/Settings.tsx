@@ -98,8 +98,12 @@ function AiSettings(): React.JSX.Element {
         </span>
       </Field>
       {settings.aiProvider === 'codex' && (
-        <Field label="ChatGPT modeli (isteğe bağlı)" hint="Boş bırakırsan ChatGPT hesabının varsayılan modeli kullanılır." className="mb-4">
-          <Input value={settings.codexModel ?? ''} placeholder="varsayılan" onChange={(e) => update({ codexModel: e.target.value.trim() })} />
+        <Field
+          label="ChatGPT modeli"
+          hint="Boş = otomatik: hesabında çalışan ilk model bulunur ve hatırlanır. Model seçimi ve giriş AI Koç sayfasının üstünde de var."
+          className="mb-4"
+        >
+          <Input value={settings.codexModel ?? ''} placeholder="otomatik" onChange={(e) => update({ codexModel: e.target.value.trim() })} />
         </Field>
       )}
       <div className="grid gap-4 md:grid-cols-2">

@@ -1,8 +1,8 @@
 {
-  "version": "1.2.0",
-  "file": "app-1.2.0.json.gz",
-  "sha256": "159c36fa97fe08ac073878f9f7fa3baa7fb99efe67df9a9dce00f6459f3527ed",
+  "version": "1.2.1",
+  "file": "app-1.2.1.json.gz",
+  "sha256": "cb61ad54514cf6d25a745b81f7081ca14c0d4c79d040b56f2242d427f22ab2c6",
   "minShell": "1.1.0",
-  "notes": "AI ile günlük plan ve Çalışma Odası, deneme sonucunu dosyadan okuma, ChatGPT desteği, sadeleştirilmiş Sayaç",
+  "notes": "ChatGPT: hesabında çalışan modeli otomatik bulur; model seçimi ve uygulama içinden giriş",
   "date": "2026-10-13"
 }

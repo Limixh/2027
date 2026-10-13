@@ -302,6 +302,8 @@ export interface DesktopApi {
     codexStatus(): Promise<CliStatus>
     codexChat(req: CliChatRequest): Promise<void>
     codexAbort(requestId: string): Promise<void>
+    codexModels(): Promise<{ slug: string; name: string }[]>
+    codexLogin(): Promise<{ ok: boolean; message: string }>
     saveAttachment(name: string, base64: string): Promise<ChatAttachment>
     onEvent(cb: (ev: AiStreamEvent) => void): () => void
   }

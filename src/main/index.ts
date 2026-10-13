@@ -139,6 +139,8 @@ function registerIpc(): void {
   ipcMain.handle('codex:status', () => codex.status())
   ipcMain.handle('codex:chat', (e, req: CliChatRequest) => codex.chat(e.sender, req))
   ipcMain.handle('codex:abort', (_e, id: string) => codex.abort(id))
+  ipcMain.handle('codex:models', () => codex.models())
+  ipcMain.handle('codex:login', () => codex.login())
   ipcMain.handle('ai:saveAttachment', (_e, name: string, b64: string) => saveAttachment(name, b64))
   ipcMain.handle('cli:status', () => cli.status())
   ipcMain.handle('cli:chat', (e, req: CliChatRequest) => cli.chat(e.sender, req))
