@@ -58,14 +58,14 @@ function KeySetup({ onSaved }: { onSaved: () => void }): React.JSX.Element {
     }
   }
   return (
-    <Card className="mx-auto mt-6 max-w-xl p-6">
+    <Card className="mx-auto max-w-xl p-6">
       <div className="mb-4 flex items-center gap-3">
         <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-white">
           <KeyRound size={20} />
         </div>
         <div>
-          <h3 className="font-semibold">Claude'u bağla</h3>
-          <p className="text-xs text-muted">AI Koç, Anthropic API anahtarınla çalışır.</p>
+          <h3 className="font-semibold">API anahtarı bağla (ayrı ücretli)</h3>
+          <p className="text-xs text-muted">Claude aboneliğinden ayrıdır; console.anthropic.com'dan kredi yüklenir. Cevaplar burada, sohbet geçmişiyle gelir.</p>
         </div>
       </div>
       <ol className="mb-4 list-decimal space-y-1.5 pl-5 text-sm text-muted">
@@ -89,10 +89,6 @@ function KeySetup({ onSaved }: { onSaved: () => void }): React.JSX.Element {
           {busy ? 'Test ediliyor…' : 'Kaydet'}
         </Button>
       </div>
-      <p className="mt-4 text-xs text-subtle">
-        API anahtarın yoksa: sağ üstteki <b>kopyala</b> (📋) düğmesiyle verilerini içeren hazır bir istemi panoya kopyalayıp
-        claude.ai'ye yapıştırabilirsin.
-      </p>
     </Card>
   )
 }
@@ -268,11 +264,20 @@ export default function AiCoach(): React.JSX.Element {
     setTimeout(() => setInput(ANALYSIS_PROMPT), 0)
   }, [params.prompt, hasKey])
 
-  const copyPrompt = (): void => {
-    const q = input.trim() || ANALYSIS_PROMPT
+  const copyPrompt = (question?: string): void => {
+    const q = question ?? (input.trim() || ANALYSIS_PROMPT)
     const text = `${SYSTEM_PROMPT}\n\n---\n\n${buildContext(data)}\n\n---\n\nSorum: ${q}`
     void navigator.clipboard.writeText(text)
     toast("Prompt panoya kopyalandı — claude.ai'ye yapıştırabilirsin", 'info')
+  }
+
+  /** Claude aboneliği olanlar için: prompt'u kopyala ve claude.ai'de yeni sohbet aç */
+  const openInClaude = (question: string): void => {
+    copyPrompt(question)
+    const url = 'https://claude.ai/new'
+    if (window.api) void window.api.openExternal(url)
+    else window.open(url, '_blank')
+    toast("Kopyalandı! Açılan claude.ai sayfasında mesaj kutusuna tıklayıp Ctrl+V yap, sonra Enter'a bas.", 'info')
   }
 
   const newChat = (): void => {
@@ -371,7 +376,7 @@ export default function AiCoach(): React.JSX.Element {
             <Button size="sm" variant="ghost" icon={<Eye size={14} />} onClick={() => setShowContext(true)} title="Gönderilen verileri gör">
               <span className="hidden 2xl:inline">Bağlam</span>
             </Button>
-            <Button size="sm" variant="ghost" icon={<ClipboardCopy size={14} />} onClick={copyPrompt} title="Prompt'u kopyala (claude.ai'de kullanmak için)">
+            <Button size="sm" variant="ghost" icon={<ClipboardCopy size={14} />} onClick={() => copyPrompt()} title="Prompt'u kopyala (claude.ai'de kullanmak için)">
               <span className="hidden 2xl:inline">Prompt'u kopyala</span>
             </Button>
           </div>
@@ -379,13 +384,44 @@ export default function AiCoach(): React.JSX.Element {
 
         {hasKey === false ? (
           <div className="flex-1 overflow-y-auto p-6">
-            {isDesktop ? (
-              <KeySetup onSaved={() => setHasKey(true)} />
-            ) : (
-              <Card className="mx-auto mt-10 max-w-lg p-6 text-sm text-muted">
-                AI Koç yalnızca masaüstü (Windows) uygulamasında çalışır. Tarayıcı modunda <b>Prompt'u kopyala</b> ile verilerini
-                claude.ai'ye taşıyabilirsin.
-              </Card>
+            <Card className="mx-auto max-w-xl p-6">
+              <div className="mb-1 flex items-center gap-2">
+                <Sparkles size={18} className="text-accent" />
+                <h3 className="font-semibold">Claude aboneliğinle kullan (ücretsiz, API gerekmez)</h3>
+              </div>
+              <p className="mb-4 text-sm text-muted">
+                Bir soru seç. Verilerinin özeti ve sorun panoya kopyalanır, claude.ai tarayıcıda açılır. Orada mesaj kutusuna
+                tıklayıp <b>Ctrl+V</b> ile yapıştır ve <b>Enter</b>'a bas.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {QUICK_PROMPTS.map((q) => (
+                  <button
+                    key={q.label}
+                    onClick={() => openInClaude(q.prompt)}
+                    className="rounded-xl border border-border bg-surface-2/50 p-3 text-left text-sm font-medium transition hover:border-accent/50 hover:bg-surface-2"
+                  >
+                    <span className="mr-1.5">{q.icon}</span>
+                    {q.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Input
+                  placeholder="Ya da kendi sorunu yaz…"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && input.trim() && openInClaude(input.trim())}
+                />
+                <Button variant="primary" disabled={!input.trim()} onClick={() => openInClaude(input.trim())}>
+                  claude.ai'de sor
+                </Button>
+              </div>
+            </Card>
+            {isDesktop && (
+              <>
+                <div className="mx-auto my-5 max-w-xl text-center text-xs text-subtle">— ya da cevaplar uygulamanın içinde gelsin —</div>
+                <KeySetup onSaved={() => setHasKey(true)} />
+              </>
             )}
           </div>
         ) : (
