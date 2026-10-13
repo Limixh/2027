@@ -173,7 +173,10 @@ export interface AiChatRequest {
   requestId: string
   model: string
   effort: 'low' | 'medium' | 'high'
+  /** Sabit sistem istemi (önbelleğe alınır) */
   system: string
+  /** Kullanıcının güncel verilerinin özeti (her istekte yenilenir) */
+  context?: string
   messages: { role: 'user' | 'assistant'; content: string }[]
 }
 

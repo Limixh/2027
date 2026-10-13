@@ -62,7 +62,7 @@ export async function testKey(model: string): Promise<{ ok: boolean; message: st
   try {
     const res = await client().messages.create({
       model,
-      max_tokens: 64,
+      max_tokens: 512,
       output_config: { effort: 'low' },
       messages: [{ role: 'user', content: 'Sadece "Bağlantı başarılı" yaz.' }]
     })
@@ -85,7 +85,10 @@ export async function chat(sender: WebContents, req: AiChatRequest): Promise<voi
       max_tokens: 32000,
       output_config: { effort: req.effort },
       // Sistem istemi her mesajda aynı kaldığı için önbelleğe alınır.
-      system: [{ type: 'text' as const, text: req.system, cache_control: { type: 'ephemeral' as const } }],
+      system: [
+        { type: 'text' as const, text: req.system, cache_control: { type: 'ephemeral' as const } },
+        ...(req.context ? [{ type: 'text' as const, text: req.context }] : [])
+      ],
       messages: req.messages
     }
     const fallback = supportsFallback(req.model)

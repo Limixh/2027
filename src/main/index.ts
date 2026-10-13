@@ -46,7 +46,7 @@ function createWindow(): void {
     show: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#0b0c12' : '#f6f7fb',
     title: 'YKS 2027 Takip',
-    icon: join(__dirname, '../../build/icon.png'),
+    ...(app.isPackaged ? {} : { icon: join(__dirname, '../../build/icon.png') }),
     autoHideMenuBar: true,
     titleBarStyle: 'hidden',
     titleBarOverlay: {

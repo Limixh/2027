@@ -13,8 +13,8 @@
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "start": "electron-vite preview",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:win:portable": "npm run build && electron-builder --win portable"
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:win:portable": "npm run build && electron-builder --win portable --publish never"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0"
