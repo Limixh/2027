@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { ConfirmHost, ToastHost } from './components/ui'
 import { useNav } from './lib/nav'
@@ -42,7 +42,13 @@ export default function App(): React.JSX.Element {
   const ready = useStore((s) => s.ready)
   const init = useStore((s) => s.init)
   const page = useNav((s) => s.page)
+  const mainRef = useRef<HTMLElement>(null)
   useTheme()
+
+  // Sayfa değişince en üste kaydır
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 })
+  }, [page])
 
   useEffect(() => {
     void init()
@@ -60,7 +66,7 @@ export default function App(): React.JSX.Element {
   return (
     <div className="flex h-full overflow-hidden">
       <Sidebar />
-      <main className="relative flex-1 overflow-y-auto">
+      <main ref={mainRef} className="relative flex-1 overflow-y-auto">
         {/* Pencere sürükleme alanı (başlık çubuğu gizli) */}
         <div className="drag sticky top-0 z-30 h-10 w-full bg-bg/80 backdrop-blur" />
         <div key={page} className="mx-auto max-w-[1400px] animate-fade-in px-8 pb-10">

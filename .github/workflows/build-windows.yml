@@ -1,8 +1,9 @@
 name: Windows build
 
+# Windows dakikaları kotadan yediği için yalnızca elle veya sürüm etiketiyle çalışır.
+# Actions sekmesinden "Run workflow" ile ya da `git tag v1.0.0 && git push --tags` ile tetikleyin.
 on:
   push:
-    branches: ['**']
     tags: ['v*']
   workflow_dispatch:
 

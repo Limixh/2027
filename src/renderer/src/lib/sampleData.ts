@@ -55,7 +55,7 @@ export function generateSampleData(base: AppData): AppData {
   for (const s of SUBJECTS) weakTopics.set(s.id, [pick(s.topics).id, pick(s.topics).id, pick(s.topics).id])
   const publishers = ['3D Yayınları', 'Limit', 'Bilgi Sarmal', 'Özdebir', 'Apotemi', 'Karekök', 'Endemik', 'Yayın Denizi']
   const makeExam = (type: 'TYT' | 'AYT', idx: number, total: number): ExamResult => {
-    const date = addDays(today, -Math.round(((total - idx) * 100) / total) + 2)
+    const date = addDays(today, -Math.round(((total - idx) * 100) / total) - (type === 'TYT' ? 1 : 0))
     const progress = idx / total
     const scores: ExamResult['scores'] = {}
     const mistakes: ExamMistake[] = []
