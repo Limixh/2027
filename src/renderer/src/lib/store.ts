@@ -23,6 +23,7 @@ export const DEFAULT_SETTINGS: Settings = {
   targetProgram: '',
   obp: 400,
   theme: 'dark',
+  aiProvider: 'cli',
   aiModel: 'claude-opus-5-5',
   aiEffort: 'medium',
   pomodoroMinutes: 50,

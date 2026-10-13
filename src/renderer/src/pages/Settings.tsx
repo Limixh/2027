@@ -77,8 +77,23 @@ function AiSettings(): React.JSX.Element {
   }
 
   return (
-    <Section icon={<Bot size={16} />} title="Yapay Zeka (Claude)" subtitle="AI Koç için Anthropic API bağlantısı">
+    <Section icon={<Bot size={16} />} title="Yapay Zeka (Claude)" subtitle="AI Koç bağlantısı">
       {!desktop && <p className="mb-4 rounded-lg bg-warning/10 p-3 text-xs text-warning">Tarayıcı modunda AI devre dışıdır.</p>}
+      <Field label="Bağlantı türü" className="mb-4">
+        <Segmented
+          value={settings.aiProvider}
+          onChange={(v) => update({ aiProvider: v })}
+          options={[
+            { value: 'cli', label: 'Claude aboneliği (önerilen)' },
+            { value: 'api', label: 'API anahtarı' }
+          ]}
+        />
+        <span className="mt-1.5 block text-[11px] leading-relaxed text-subtle">
+          {settings.aiProvider === 'cli'
+            ? "Bilgisayarına kurulu Claude Code üzerinden Pro/Max aboneliğini kullanır, ek ücret yok. Kurulum adımları AI Koç sayfasında."
+            : 'console.anthropic.com hesabından kullandıkça ödenir; abonelikten ayrıdır.'}
+        </span>
+      </Field>
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Model">
           <Select value={settings.aiModel} onChange={(e) => update({ aiModel: e.target.value })}>
@@ -89,7 +104,7 @@ function AiSettings(): React.JSX.Element {
             ))}
           </Select>
         </Field>
-        <Field label="Düşünme derinliği" hint="Yüksek = daha detaylı ama daha yavaş ve maliyetli">
+        <Field label="Düşünme derinliği (API)" hint="Yüksek = daha detaylı ama daha yavaş ve maliyetli">
           <Segmented
             value={settings.aiEffort}
             onChange={(v) => update({ aiEffort: v })}
@@ -101,6 +116,7 @@ function AiSettings(): React.JSX.Element {
           />
         </Field>
       </div>
+      {settings.aiProvider === 'api' && (
       <div className="mt-5 rounded-xl border border-border bg-surface-2/60 p-4">
         <div className="mb-2 flex items-center gap-2 text-sm font-medium">
           <KeyRound size={15} className="text-accent" /> API anahtarı
@@ -147,6 +163,7 @@ function AiSettings(): React.JSX.Element {
           Kullanım ücreti Anthropic hesabından düşülür.
         </p>
       </div>
+      )}
     </Section>
   )
 }

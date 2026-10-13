@@ -16,9 +16,9 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { ChatMessage, ChatThread } from '../../../shared/types'
+import type { ChatMessage, ChatThread, CliStatus } from '../../../shared/types'
 import { Button, Card, cn, confirm, Input, Modal, toast } from '@/components/ui'
-import { AI_MODELS, ANALYSIS_PROMPT, buildContext, QUICK_PROMPTS, SYSTEM_PROMPT } from '@/lib/aiContext'
+import { AI_MODELS, ANALYSIS_PROMPT, buildCliPrompt, buildContext, QUICK_PROMPTS, SYSTEM_PROMPT } from '@/lib/aiContext'
 import { relativeDay, todayKey } from '@/lib/date'
 import { uid } from '@/lib/id'
 import { useNav } from '@/lib/nav'
@@ -89,6 +89,69 @@ function KeySetup({ onSaved }: { onSaved: () => void }): React.JSX.Element {
           {busy ? 'Test ediliyor…' : 'Kaydet'}
         </Button>
       </div>
+    </Card>
+  )
+}
+
+function Step({ n, children }: { n: number; children: React.ReactNode }): React.JSX.Element {
+  return (
+    <li className="flex gap-3">
+      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent/15 text-xs font-semibold text-accent">{n}</span>
+      <div className="min-w-0 flex-1 pt-0.5">{children}</div>
+    </li>
+  )
+}
+
+function CopyCode({ code }: { code: string }): React.JSX.Element {
+  return (
+    <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-xs">
+      <span className="min-w-0 flex-1 select-all break-all">{code}</span>
+      <button
+        className="shrink-0 text-subtle hover:text-text"
+        onClick={() => {
+          void navigator.clipboard.writeText(code)
+          toast('Kopyalandı', 'info')
+        }}
+        title="Kopyala"
+      >
+        <ClipboardCopy size={14} />
+      </button>
+    </div>
+  )
+}
+
+function CliSetup({ checking, onCheck }: { checking: boolean; onCheck: () => void }): React.JSX.Element {
+  return (
+    <Card className="mx-auto max-w-xl p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-white">
+          <Sparkles size={20} />
+        </div>
+        <div>
+          <h3 className="font-semibold">Claude aboneliğini bağla (Pro / Max)</h3>
+          <p className="text-xs text-muted">Bir kerelik kurulum, API anahtarı gerekmez, aboneliğinden harcar.</p>
+        </div>
+      </div>
+      <ol className="space-y-4 text-sm text-muted">
+        <Step n={1}>
+          Başlat menüsüne <b className="text-text">PowerShell</b> yaz ve aç. Açılan pencereye aşağıdaki satırı yapıştır
+          (sağ tık = yapıştır) ve <b className="text-text">Enter</b>'a bas. Claude Code kurulur.
+          <CopyCode code="irm https://claude.ai/install.ps1 | iex" />
+        </Step>
+        <Step n={2}>
+          Kurulum bitince PowerShell penceresini <b className="text-text">kapatıp yeniden aç</b>, şunu yaz ve Enter'a bas:
+          <CopyCode code="claude" />
+          Tarayıcı açılır, <b className="text-text">Claude hesabınla (abonelik)</b> giriş yap. Giriş tamamlanınca PowerShell'i kapatabilirsin.
+        </Step>
+        <Step n={3}>
+          Bu uygulamayı kapatıp tekrar aç ya da aşağıdaki düğmeye bas.
+          <div className="mt-2">
+            <Button variant="primary" disabled={checking} onClick={onCheck}>
+              {checking ? 'Kontrol ediliyor…' : 'Bağlantıyı kontrol et'}
+            </Button>
+          </div>
+        </Step>
+      </ol>
     </Card>
   )
 }
@@ -168,6 +231,11 @@ export default function AiCoach(): React.JSX.Element {
 
   const isDesktop = !!window.api
   const [hasKey, setHasKey] = useState<boolean | null>(isDesktop ? null : false)
+  const [cli, setCli] = useState<CliStatus | null>(null)
+  const [checking, setChecking] = useState(false)
+  const provider = isDesktop ? settings.aiProvider : 'api'
+  const notReady = provider === 'cli' ? cli?.installed === false : hasKey === false
+  const ready = provider === 'cli' ? !!cli?.installed : !!hasKey
   const [activeId, setActiveId] = useState<string | null>(chats[0]?.id ?? null)
   const [input, setInput] = useState('')
   const [includeContext, setIncludeContext] = useState(true)
@@ -184,6 +252,18 @@ export default function AiCoach(): React.JSX.Element {
   useEffect(() => {
     if (isDesktop) void window.api!.ai.hasKey().then(setHasKey)
   }, [isDesktop])
+
+  const checkCli = useCallback(async () => {
+    if (!window.api) return
+    setChecking(true)
+    const st = await window.api.ai.cliStatus()
+    setChecking(false)
+    setCli(st)
+    return st
+  }, [])
+  useEffect(() => {
+    if (provider === 'cli') void checkCli()
+  }, [provider, checkCli])
 
   // Akış olaylarını dinle
   useEffect(() => {
@@ -242,6 +322,14 @@ export default function AiCoach(): React.JSX.Element {
       const requestId = uid()
       setStreaming({ requestId, threadId: thread.id, text: '' })
       const st = useStore.getState().data
+      if (st.settings.aiProvider === 'cli') {
+        void window.api.ai.cliChat({
+          requestId,
+          model: st.settings.aiModel,
+          prompt: buildCliPrompt(toApiMessages(thread.messages), includeContext ? buildContext(st) : undefined)
+        })
+        return
+      }
       void window.api.ai.chat({
         requestId,
         model: st.settings.aiModel,
@@ -257,12 +345,12 @@ export default function AiCoach(): React.JSX.Element {
   // Analiz sayfasından "AI ile analiz" ile gelindiyse otomatik başlat
   const autoRef = useRef(false)
   useEffect(() => {
-    if (autoRef.current || params.prompt !== 'analiz' || !hasKey) return
+    if (autoRef.current || params.prompt !== 'analiz' || !ready) return
     autoRef.current = true
     setActiveId(null)
     // activeId güncellendikten sonra gönder
     setTimeout(() => setInput(ANALYSIS_PROMPT), 0)
-  }, [params.prompt, hasKey])
+  }, [params.prompt, ready])
 
   const copyPrompt = (question?: string): void => {
     const q = question ?? (input.trim() || ANALYSIS_PROMPT)
@@ -344,13 +432,26 @@ export default function AiCoach(): React.JSX.Element {
             </div>
             <div className="min-w-0">
               <div className="text-sm font-semibold">AI Koç</div>
-              <div className="truncate text-[11px] text-muted">{modelLabel(settings.aiModel)} · verilerinle kişisel analiz</div>
+              <div className="truncate text-[11px] text-muted">
+                {modelLabel(settings.aiModel)} · {provider === 'cli' ? 'Claude aboneliği' : 'API anahtarı'}
+              </div>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <Button size="icon" variant="ghost" className="xl:hidden" onClick={newChat} title="Yeni sohbet" aria-label="Yeni sohbet">
               <MessageSquarePlus size={15} />
             </Button>
+            {isDesktop && (
+              <select
+                className="input h-8 w-auto py-0 text-xs"
+                value={settings.aiProvider}
+                onChange={(e) => updateSettings({ aiProvider: e.target.value as 'cli' | 'api' })}
+                title="Bağlantı türü"
+              >
+                <option value="cli">Abonelik</option>
+                <option value="api">API anahtarı</option>
+              </select>
+            )}
             <select
               className="input h-8 w-auto py-0 text-xs"
               value={settings.aiModel}
@@ -382,12 +483,24 @@ export default function AiCoach(): React.JSX.Element {
           </div>
         </div>
 
-        {hasKey === false ? (
+        {notReady ? (
           <div className="flex-1 overflow-y-auto p-6">
+            {provider === 'cli' && (
+              <>
+                <CliSetup
+                  checking={checking}
+                  onCheck={async () => {
+                    const st = await checkCli()
+                    toast(st?.installed ? `Claude Code bulundu (${st.version ?? ''})` : 'Claude Code bulunamadı — adımları kontrol et', st?.installed ? 'success' : 'error')
+                  }}
+                />
+                <div className="mx-auto my-5 max-w-xl text-center text-xs text-subtle">— kurmadan da kullanabilirsin —</div>
+              </>
+            )}
             <Card className="mx-auto max-w-xl p-6">
               <div className="mb-1 flex items-center gap-2">
                 <Sparkles size={18} className="text-accent" />
-                <h3 className="font-semibold">Claude aboneliğinle kullan (ücretsiz, API gerekmez)</h3>
+                <h3 className="font-semibold">claude.ai'ye kopyala-yapıştır (kurulum gerektirmez)</h3>
               </div>
               <p className="mb-4 text-sm text-muted">
                 Bir soru seç. Verilerinin özeti ve sorun panoya kopyalanır, claude.ai tarayıcıda açılır. Orada mesaj kutusuna
@@ -417,7 +530,7 @@ export default function AiCoach(): React.JSX.Element {
                 </Button>
               </div>
             </Card>
-            {isDesktop && (
+            {isDesktop && provider === 'api' && (
               <>
                 <div className="mx-auto my-5 max-w-xl text-center text-xs text-subtle">— ya da cevaplar uygulamanın içinde gelsin —</div>
                 <KeySetup onSaved={() => setHasKey(true)} />
@@ -483,7 +596,9 @@ export default function AiCoach(): React.JSX.Element {
                     variant="secondary"
                     size="icon"
                     className="h-9 w-9"
-                    onClick={() => window.api?.ai.abort(streaming.requestId)}
+                    onClick={() =>
+                      provider === 'cli' ? window.api?.ai.cliAbort(streaming.requestId) : window.api?.ai.abort(streaming.requestId)
+                    }
                     aria-label="Durdur"
                   >
                     <Square size={14} />

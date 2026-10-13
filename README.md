@@ -41,13 +41,25 @@ npm run dist:win     # release/ klasörüne Windows kurulum dosyası üretir
 
 ## AI Koç'u bağlama (Claude)
 
-1. [console.anthropic.com](https://console.anthropic.com/settings/keys) adresinden bir API anahtarı oluştur.
-2. Uygulamada **Ayarlar → Yapay Zeka** veya **AI Koç** sayfasında anahtarı yapıştır. Anahtar Windows'un şifreleme altyapısıyla (DPAPI) saklanır.
-3. Model seç: **Claude Opus 5.5** (en iyi analiz, varsayılan), **Sonnet 5.5** (hızlı) veya **Haiku 5.5** (en ucuz).
+### A) Claude aboneliğinle (Pro/Max) — önerilen, ek ücret yok
+Uygulama, bilgisayarına kurulu **Claude Code**'u arka planda çalıştırır; Claude Code senin abonelik girişini kullanır.
 
-API anahtarın yoksa: AI Koç sayfasındaki **Prompt'u kopyala** düğmesi, verilerinin özetini ve sorunu içeren hazır bir istemi panoya kopyalar; bunu claude.ai'ye yapıştırarak da analiz yaptırabilirsin.
+1. Başlat menüsünden **PowerShell**'i aç, şunu yapıştırıp Enter'a bas:
+   ```powershell
+   irm https://claude.ai/install.ps1 | iex
+   ```
+2. PowerShell'i kapatıp yeniden aç, `claude` yaz, Enter'a bas ve açılan tarayıcıda Claude hesabınla giriş yap.
+3. Uygulamada **AI Koç → Bağlantıyı kontrol et**. Hazır.
 
-**Bağlam** düğmesiyle Claude'a tam olarak hangi verilerin gönderildiğini görebilirsin.
+Model menüsünden Opus 5.5 / Sonnet 5.5 / Haiku 5.5 seçebilirsin (aboneliğinin izin verdiği kadarıyla). Kullanım, aboneliğinin limitlerinden düşer.
+
+### B) Kurulumsuz: claude.ai'ye kopyala-yapıştır
+AI Koç sayfasında bir soruya tıkla → verilerin panoya kopyalanır ve claude.ai açılır → mesaj kutusuna **Ctrl+V**, Enter.
+
+### C) API anahtarı (abonelikten ayrı ücretli)
+Ayarlar → Yapay Zeka → "API anahtarı" seçip [console.anthropic.com](https://console.anthropic.com/settings/keys)'dan aldığın anahtarı gir.
+
+**Bağlam** (👁) düğmesiyle Claude'a tam olarak hangi verilerin gönderildiğini görebilirsin.
 
 ## Puan tahmini hakkında
 Puan tahminleri geçmiş yılların ortalama katsayılarına dayanan **yaklaşık** değerlerdir (ham puan + OBP × 0,12). ÖSYM'nin gerçek hesaplaması o yılın standart sapmalarına bağlıdır.

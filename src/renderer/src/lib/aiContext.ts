@@ -236,3 +236,24 @@ export const AI_MODELS = [
   { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', hint: 'En hızlı ve ucuz' }
 ]
 
+
+/**
+ * Claude Code CLI (abonelik) modu için tek parça istem: talimatlar, veriler,
+ * önceki konuşma ve yeni soru stdin'den tek mesaj olarak gönderilir.
+ */
+export function buildCliPrompt(
+  messages: { role: 'user' | 'assistant'; content: string }[],
+  context: string | undefined
+): string {
+  const history = messages.slice(0, -1)
+  const last = messages[messages.length - 1]
+  const parts = [`<talimatlar>\n${SYSTEM_PROMPT}\n</talimatlar>`]
+  if (context) parts.push(`<ogrenci_verileri>\n${context}\n</ogrenci_verileri>`)
+  if (history.length) {
+    parts.push(
+      `<onceki_konusma>\n${history.map((m) => `${m.role === 'user' ? 'Öğrenci' : 'Koç (sen)'}: ${m.content}`).join('\n\n')}\n</onceki_konusma>`
+    )
+  }
+  parts.push(`Öğrencinin yeni mesajı:\n${last?.content ?? ''}`)
+  return parts.join('\n\n')
+}

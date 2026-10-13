@@ -2,7 +2,8 @@ import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electro
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFileSync } from 'fs'
 import { join } from 'path'
 import * as ai from './ai'
-import type { AiChatRequest, AppData } from '../shared/types'
+import * as cli from './claudeCli'
+import type { AiChatRequest, AppData, CliChatRequest } from '../shared/types'
 
 const dataDir = (): string => app.getPath('userData')
 const dataFile = (): string => join(dataDir(), 'yks-data.json')
@@ -124,6 +125,9 @@ function registerIpc(): void {
     void ai.chat(e.sender, req)
   })
   ipcMain.handle('ai:abort', (_e, id: string) => ai.abort(id))
+  ipcMain.handle('cli:status', () => cli.status())
+  ipcMain.handle('cli:chat', (e, req: CliChatRequest) => cli.chat(e.sender, req))
+  ipcMain.handle('cli:abort', (_e, id: string) => cli.abort(id))
 }
 
 // Tarih seçiciler ve sayı biçimleri Türkçe olsun

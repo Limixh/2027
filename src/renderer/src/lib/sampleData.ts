@@ -102,20 +102,20 @@ export function generateSampleData(base: AppData): AppData {
   }
 
   // Hata defteri
-  const samples = [
-    ['Paragrafta ana düşünceyi yardımcı düşünceyle karıştırdım.', 'Ana düşünce tüm paragrafı kapsamalı; önce paragrafın sonuna bak.'],
-    ['Kök içinde negatif sayı işaretini atladım.', 'Mutlak değer ve kök işaretlerinde işaret kontrolünü en son tekrar yap.'],
-    ['Mol kavramında Avogadro sayısı ile kütleyi karıştırdım.', 'n = m/MA ve n = N/NA formüllerini birimlerle birlikte yaz.'],
-    ['Soru kökündeki "değildir" ifadesini gözden kaçırdım.', 'Olumsuz soru köklerinin altını çiz.'],
-    ['Kesir problemlerinde bütünü yanlış seçtim.', 'Önce bütüne x de, sonra kesirleri x cinsinden yaz.'],
-    ['Hücre zarından madde geçişinde aktif taşıma ile kolaylaştırılmış difüzyonu karıştırdım.', 'ATP harcıyor mu? Taşıyıcı protein var mı? Tablo yap.']
+  const samples: [string, string, string][] = [
+    ['tyt-turkce', 'Paragrafta ana düşünceyi yardımcı düşünceyle karıştırdım.', 'Ana düşünce tüm paragrafı kapsamalı; önce paragrafın sonuna bak.'],
+    ['tyt-matematik', 'Kök içinde negatif sayı işaretini atladım.', 'Mutlak değer ve kök işaretlerinde işaret kontrolünü en son tekrar yap.'],
+    ['tyt-kimya', 'Mol kavramında Avogadro sayısı ile kütleyi karıştırdım.', 'n = m/MA ve n = N/NA formüllerini birimlerle birlikte yaz.'],
+    ['tyt-turkce', 'Soru kökündeki "değildir" ifadesini gözden kaçırdım.', 'Olumsuz soru köklerinin altını çiz.'],
+    ['tyt-matematik', 'Kesir problemlerinde bütünü yanlış seçtim.', 'Önce bütüne x de, sonra kesirleri x cinsinden yaz.'],
+    ['tyt-biyoloji', 'Hücre zarından madde geçişinde aktif taşıma ile kolaylaştırılmış difüzyonu karıştırdım.', 'ATP harcıyor mu? Taşıyıcı protein var mı? Tablo yap.']
   ]
-  for (const [text, lesson] of samples) {
-    const s = pick(studySubjects)
+  for (const [subjectId, text, lesson] of samples) {
+    const s = SUBJECTS.find((x) => x.id === subjectId)!
     d.mistakeNotes.push({
       id: uid(),
       subjectId: s.id,
-      topicId: pick(s.topics).id,
+      topicId: undefined,
       text,
       lesson,
       kind: pick(kinds),

@@ -134,6 +134,8 @@ export interface Settings {
   /** Ortaöğretim başarı puanı (diploma notu x 5) */
   obp: number
   theme: 'dark' | 'light' | 'system'
+  /** 'cli' = Claude aboneliği (Claude Code CLI), 'api' = API anahtarı */
+  aiProvider: 'cli' | 'api'
   aiModel: string
   aiEffort: 'low' | 'medium' | 'high'
   pomodoroMinutes: number
@@ -180,6 +182,18 @@ export interface AiChatRequest {
   messages: { role: 'user' | 'assistant'; content: string }[]
 }
 
+export interface CliChatRequest {
+  requestId: string
+  model: string
+  /** Talimatlar + veriler + sohbet geçmişi + yeni soru (stdin ile gönderilir) */
+  prompt: string
+}
+
+export interface CliStatus {
+  installed: boolean
+  version?: string
+}
+
 export type AiStreamEvent =
   | { requestId: string; type: 'text'; text: string }
   | { requestId: string; type: 'done'; stopReason: string | null; model: string }
@@ -199,6 +213,9 @@ export interface DesktopApi {
     testKey(model: string): Promise<{ ok: boolean; message: string }>
     chat(req: AiChatRequest): Promise<void>
     abort(requestId: string): Promise<void>
+    cliStatus(): Promise<CliStatus>
+    cliChat(req: CliChatRequest): Promise<void>
+    cliAbort(requestId: string): Promise<void>
     onEvent(cb: (ev: AiStreamEvent) => void): () => void
   }
   openExternal(url: string): Promise<void>

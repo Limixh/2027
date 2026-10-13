@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AiChatRequest, AiStreamEvent, AppData, DesktopApi } from '../shared/types'
+import type { AiChatRequest, CliChatRequest, AiStreamEvent, AppData, DesktopApi } from '../shared/types'
 
 const api: DesktopApi = {
   isDesktop: true,
@@ -15,6 +15,9 @@ const api: DesktopApi = {
     testKey: (model: string) => ipcRenderer.invoke('ai:test', model),
     chat: (req: AiChatRequest) => ipcRenderer.invoke('ai:chat', req),
     abort: (id: string) => ipcRenderer.invoke('ai:abort', id),
+    cliStatus: () => ipcRenderer.invoke('cli:status'),
+    cliChat: (req: CliChatRequest) => ipcRenderer.invoke('cli:chat', req),
+    cliAbort: (id: string) => ipcRenderer.invoke('cli:abort', id),
     onEvent: (cb: (ev: AiStreamEvent) => void) => {
       const listener = (_e: unknown, ev: AiStreamEvent): void => cb(ev)
       ipcRenderer.on('ai:event', listener)
