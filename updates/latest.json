@@ -1,8 +1,8 @@
 {
   "version": "1.1.0",
   "file": "app-1.1.0.json.gz",
-  "sha256": "2a6643ee93f57f8bddd5b01c2e0f3994249e9ee31f499cb694fccc5c1215a9e5",
+  "sha256": "5bb13b08c62b5dad50c9208252be0364a5ec8e39c07e011b5db936b6197400ed",
   "minShell": "1.1.0",
-  "notes": "Sade renkler, tam ekran Sayaç sayfası, otomatik güncelleme",
+  "notes": "Sade renkler, Liquid Glass tarzı tam ekran Sayaç sayfası, otomatik güncelleme",
   "date": "2026-10-13"
 }

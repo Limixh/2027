@@ -1,6 +1,6 @@
 // Tam ekran sayaç: geri sayım listesi, kronometre ve zamanlayıcı.
 // Kenar çubuğu olmadan tüm pencereyi kaplar; tam ekran (F11) desteklenir.
-import { ArrowLeft, Bell, Flag, Maximize2, Minimize2, Plus, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bell, Flag, Maximize2, Minimize2, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { create } from 'zustand'
 import { cn, toast } from '@/components/ui'
@@ -79,22 +79,25 @@ function RoundButton({
   tone?: 'neutral' | 'go' | 'stop'
   disabled?: boolean
 }): React.JSX.Element {
-  const tones = {
-    neutral: 'bg-surface-3/70 text-text',
-    go: 'bg-success/15 text-success',
-    stop: 'bg-danger/15 text-danger'
+  const tints = {
+    neutral: 'text-text',
+    go: 'text-text',
+    stop: 'text-text'
+  }
+  const glow = {
+    neutral: 'transparent',
+    go: 'rgb(var(--success) / 0.45)',
+    stop: 'rgb(var(--danger) / 0.45)'
   }
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'grid h-[88px] w-[88px] place-items-center rounded-full text-[15px] font-medium outline outline-2 outline-offset-[3px] outline-transparent transition active:scale-95 disabled:opacity-40',
-        tones[tone],
-        tone === 'go' && 'outline-success/25',
-        tone === 'stop' && 'outline-danger/25',
-        tone === 'neutral' && 'outline-surface-3/60'
+        'glass glass-press grid h-[92px] w-[92px] place-items-center rounded-full text-[15px] font-semibold disabled:pointer-events-none disabled:opacity-35',
+        tints[tone]
       )}
+      style={{ backgroundColor: glow[tone] }}
     >
       {children}
     </button>
@@ -156,9 +159,9 @@ function CountdownTab(): React.JSX.Element {
   const [time, setTime] = useState('10:00')
 
   return (
-    <div className="grid h-full w-full grid-cols-1 gap-10 lg:grid-cols-[1fr_340px]">
+    <div className="grid h-full w-full grid-cols-1 gap-10 lg:grid-cols-[1fr_360px]">
       <div className="flex flex-col items-center justify-center text-center">
-        <div className="mb-6 text-sm font-medium uppercase tracking-[0.25em] text-muted">{current.title}</div>
+        <div className="mb-6 text-sm font-semibold uppercase tracking-[0.25em] text-muted">{current.title}</div>
         {diff > 0 ? (
           <>
             <BigNumber>
@@ -172,7 +175,7 @@ function CountdownTab(): React.JSX.Element {
               <span className="text-subtle">:</span>
               {pad(s)}
             </div>
-            <div className="mt-8 text-sm text-subtle">
+            <div className="mt-8 text-sm text-muted">
               {formatDate(current.at.slice(0, 10))} · {current.at.slice(11, 16)}
               {current.fixed && ' · tahmini tarih, Ayarlar’dan değiştirilebilir'}
             </div>
@@ -183,15 +186,15 @@ function CountdownTab(): React.JSX.Element {
       </div>
 
       {/* Liste */}
-      <div className="flex min-h-0 flex-col justify-center">
-        <div className="mb-3 flex items-center justify-between px-1">
-          <span className="text-xs font-medium uppercase tracking-[0.2em] text-subtle">Geri sayımlar</span>
+      <div className="glass flex min-h-0 flex-col self-center rounded-[28px] p-3">
+        <div className="mb-2 flex items-center justify-between px-3 pt-1">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Geri sayımlar</span>
           <button className="text-subtle transition hover:text-text" onClick={() => setAdding((v) => !v)} aria-label="Ekle" title="Ekle">
             <Plus size={18} />
           </button>
         </div>
         {adding && (
-          <div className="mb-3 space-y-2 rounded-2xl bg-surface-2/70 p-3">
+          <div className="mb-3 space-y-2 rounded-2xl bg-bg/40 p-3">
             <input className="input" placeholder="Başlık (ör. Okul sınavı)" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
             <div className="flex gap-2">
               <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -210,7 +213,7 @@ function CountdownTab(): React.JSX.Element {
             </button>
           </div>
         )}
-        <div className="max-h-[60vh] space-y-1 overflow-y-auto">
+        <div className="max-h-[56vh] space-y-1 overflow-y-auto">
           {items.map((it) => {
             const dd = splitDiff(parseLocal(it.at).getTime() - Date.now())
             const past = parseLocal(it.at).getTime() <= Date.now()
@@ -220,12 +223,12 @@ function CountdownTab(): React.JSX.Element {
                 onClick={() => setSelected(it.id)}
                 className={cn(
                   'group flex cursor-pointer items-center gap-3 rounded-2xl px-4 py-3 transition',
-                  it.id === current.id ? 'bg-surface-2' : 'hover:bg-surface-2/50'
+                  it.id === current.id ? 'bg-white/[0.12] shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]' : 'hover:bg-white/[0.06]'
                 )}
               >
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-medium">{it.title}</div>
-                  <div className="text-xs text-subtle">{formatDate(it.at.slice(0, 10))}</div>
+                  <div className="text-xs text-muted">{formatDate(it.at.slice(0, 10))}</div>
                 </div>
                 <div className="tabular text-right text-xl font-light text-text/90">
                   {past ? '—' : `${dd.d} g`}
@@ -323,7 +326,7 @@ function StopwatchTab(): React.JSX.Element {
           </RoundButton>
         )}
       </div>
-      <div className="mt-8 h-[30vh] w-full max-w-xl overflow-y-auto">
+      <div className={cn('mt-8 h-[30vh] w-full max-w-xl overflow-y-auto rounded-[28px] px-5', (sw.laps.length > 0 || sw.running) && 'glass')}>
         {(sw.laps.length > 0 || sw.running) &&
           [...lapTimes.map((t, i) => ({ i: i + 1, t })), ...(sw.laps.length || sw.running ? [{ i: sw.laps.length + 1, t: currentLap }] : [])]
             .reverse()
@@ -331,13 +334,13 @@ function StopwatchTab(): React.JSX.Element {
               <div
                 key={i}
                 className={cn(
-                  'tabular flex items-center justify-between border-t border-border/70 px-1 py-3 text-[17px] font-light',
-                  t === best && i <= lapTimes.length && 'text-success',
-                  t === worst && i <= lapTimes.length && 'text-danger'
+                  'tabular flex items-center justify-between border-b border-white/10 px-1 py-3 text-[17px] font-light last:border-0',
+                  t === best && i <= lapTimes.length && 'font-normal text-success dark:text-[#7fd6a0]',
+                  t === worst && i <= lapTimes.length && 'font-normal text-danger dark:text-[#f08f8f]'
                 )}
               >
                 <span className="flex items-center gap-2">
-                  <Flag size={13} className="text-subtle" /> Tur {i}
+                  <Flag size={13} className="opacity-60" /> Tur {i}
                 </span>
                 <span>{fmtSw(t)}</span>
               </div>
@@ -425,9 +428,10 @@ function TimerTab(): React.JSX.Element {
                     setS(0)
                   }}
                   className={cn(
-                    'h-9 rounded-full px-4 text-sm transition',
-                    total === p * 60000 ? 'bg-text text-bg' : 'bg-surface-2 text-muted hover:text-text'
+                    'glass glass-press h-10 rounded-full px-5 text-sm font-medium',
+                    total === p * 60000 ? 'text-text' : 'text-muted hover:text-text'
                   )}
+                  style={total === p * 60000 ? { backgroundColor: 'rgb(var(--accent) / 0.35)' } : undefined}
                 >
                   {p} dk
                 </button>
@@ -440,7 +444,7 @@ function TimerTab(): React.JSX.Element {
             )}
           </>
         ) : (
-          <div className="relative grid place-items-center" style={{ width: size, height: size }}>
+          <div className="glass relative grid place-items-center rounded-full" style={{ width: size + 40, height: size + 40 }}>
             <svg width={size} height={size} className="-rotate-90">
               <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgb(var(--surface-3))" strokeWidth={6} />
               <circle
@@ -500,9 +504,40 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'timer', label: 'Zamanlayıcı' }
 ]
 
+type Backdrop = 'aurora' | 'plain'
+const BG_KEY = 'yks-focus-bg'
+
+/** Cam efektinin görünmesi için arkada yavaşça dolaşan yumuşak renk kümeleri */
+function Aurora(): React.JSX.Element {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="lg-blob lg-drift-1" style={{ width: '46vw', height: '46vw', left: '-8vw', top: '-12vw', background: '#7c9cc0' }} />
+      <div className="lg-blob lg-drift-2" style={{ width: '40vw', height: '40vw', right: '-10vw', top: '10vh', background: '#b39bc4' }} />
+      <div className="lg-blob lg-drift-3" style={{ width: '38vw', height: '38vw', left: '24vw', bottom: '-18vw', background: '#8fb59a' }} />
+      <div className="lg-blob lg-drift-2" style={{ width: '24vw', height: '24vw', right: '18vw', bottom: '4vh', background: '#d4b483', animationDelay: '-12s' }} />
+    </div>
+  )
+}
+
 export default function Focus(): React.JSX.Element {
   const go = useNav((s) => s.go)
   const [tab, setTab] = useState<Tab>('countdown')
+  const [backdrop, setBackdrop] = useState<Backdrop>(() => {
+    try {
+      return (localStorage.getItem(BG_KEY) as Backdrop) || 'aurora'
+    } catch {
+      return 'aurora'
+    }
+  })
+  const changeBackdrop = (b: Backdrop): void => {
+    setBackdrop(b)
+    try {
+      localStorage.setItem(BG_KEY, b)
+    } catch {
+      /* yoksay */
+    }
+  }
+  const tabIndex = TABS.findIndex((t) => t.id === tab)
   const [full, setFull] = useState(!!document.fullscreenElement)
 
   useEffect(() => {
@@ -529,39 +564,56 @@ export default function Focus(): React.JSX.Element {
   }
 
   return (
-    <div className="relative flex h-full w-full select-none flex-col bg-bg">
+    <div className="lg-scene relative flex h-full w-full select-none flex-col overflow-hidden bg-bg">
+      {backdrop === 'aurora' && <Aurora />}
       {/* Üst çubuk: tam ekranda gizli kalır, fareyle üzerine gelince görünür */}
-      <div className={cn('drag flex h-14 shrink-0 items-center justify-between px-5 transition-opacity', full && 'opacity-0 hover:opacity-100')}>
+      <div
+        className={cn(
+          'drag relative z-10 flex h-16 shrink-0 items-center justify-between px-5 transition-opacity duration-500',
+          full && 'opacity-0 hover:opacity-100'
+        )}
+      >
         <button
-          className="no-drag flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted transition hover:bg-surface-2 hover:text-text"
+          className="glass glass-press no-drag flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-text"
           onClick={() => go('dashboard')}
         >
-          <ArrowLeft size={15} /> Uygulamaya dön
+          <ArrowLeft size={15} /> Uygulama
         </button>
-        <div className="no-drag flex rounded-full bg-surface-2 p-1">
+        <div className="glass no-drag relative flex rounded-full p-1">
+          {/* Kayan cam mercek */}
+          <span
+            className="absolute bottom-1 top-1 rounded-full bg-white/[0.16] shadow-[inset_0_1px_0_rgb(255_255_255/0.45),0_4px_14px_-4px_rgb(0_0_0/0.35)] transition-transform duration-500 [transition-timing-function:cubic-bezier(0.34,1.4,0.64,1)]"
+            style={{ width: 120, left: 4, transform: `translateX(${tabIndex * 120}px)` }}
+          />
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={cn(
-                'h-8 rounded-full px-5 text-sm font-medium transition',
-                tab === t.id ? 'bg-surface text-text shadow-sm' : 'text-muted hover:text-text'
-              )}
+              className={cn('relative z-10 h-9 w-[120px] rounded-full text-sm font-semibold transition-colors', tab === t.id ? 'text-text' : 'text-muted hover:text-text')}
             >
               {t.label}
             </button>
           ))}
         </div>
-        <button
-          className="no-drag mr-[140px] flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm text-muted transition hover:bg-surface-2 hover:text-text"
-          onClick={toggleFull}
-          title="Tam ekran (F11)"
-        >
-          {full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-          {full ? 'Küçült' : 'Tam ekran'}
-        </button>
+        <div className="no-drag mr-[140px] flex items-center gap-2">
+          <button
+            className="glass glass-press flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-text"
+            onClick={() => changeBackdrop(backdrop === 'aurora' ? 'plain' : 'aurora')}
+            title="Arka plan"
+          >
+            <Sparkles size={15} /> {backdrop === 'aurora' ? 'Cam' : 'Sade'}
+          </button>
+          <button
+            className="glass glass-press flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-text"
+            onClick={toggleFull}
+            title="Tam ekran (F11)"
+          >
+            {full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            {full ? 'Küçült' : 'Tam ekran'}
+          </button>
+        </div>
       </div>
-      <div className="min-h-0 flex-1 px-[6vw] pb-8">
+      <div key={tab} className="relative z-10 min-h-0 flex-1 animate-fade-in px-[6vw] pb-8">
         {tab === 'countdown' && <CountdownTab />}
         {tab === 'stopwatch' && <StopwatchTab />}
         {tab === 'timer' && <TimerTab />}
