@@ -165,7 +165,7 @@ export function GlassModal({
     <div className="lg-scene fixed inset-0 z-50 flex items-center justify-center p-5">
       <div className="absolute inset-0 animate-fade-in bg-black/45 backdrop-blur-md" onClick={onClose} />
       <div className="glass relative flex max-h-[92vh] w-full animate-scale-in flex-col rounded-[28px]" style={{ maxWidth: width }} role="dialog" aria-modal="true">
-        <div className="absolute inset-0 -z-10 rounded-[inherit] bg-bg/60" />
+        <div className="absolute inset-0 -z-10 rounded-[inherit] bg-bg/80" />
         <div className="flex items-start justify-between gap-4 px-6 pb-3 pt-5">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-text">{title}</h2>
@@ -175,7 +175,7 @@ export function GlassModal({
             <X size={16} />
           </IconBtn>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-4 pt-2">{children}</div>
         {footer && <div className="flex justify-end gap-2 border-t border-text/10 px-6 py-4">{footer}</div>}
       </div>
     </div>,

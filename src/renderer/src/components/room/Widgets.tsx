@@ -109,9 +109,9 @@ function TimerWidget(): React.JSX.Element {
             onChange={(e) => setCustom(e.target.value.replace(/\D/g, '').slice(0, 3))}
             onKeyDown={(e) => e.key === 'Enter' && applyCustom()}
             onBlur={applyCustom}
-            placeholder="dk"
+            placeholder="özel"
             inputMode="numeric"
-            className="h-8 w-14 rounded-full border border-text/15 bg-text/[0.06] text-center text-xs text-text outline-none placeholder:text-muted focus:border-accent"
+            className="h-8 w-16 rounded-full border border-text/15 bg-text/[0.06] text-center text-xs text-text outline-none placeholder:text-muted focus:border-accent"
             aria-label="Özel süre (dakika)"
           />
         </div>

@@ -1,5 +1,5 @@
 // "Bitti" diyaloğu: çalışma kaydı + konu durumu otomatik güncellenir.
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { PlanTask, TaskResult } from '../../../../shared/types'
 import { SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
 import { toast } from '@/components/ui'
@@ -21,17 +21,16 @@ export default function CompleteModal({ date, task, onClose }: { date: string; t
   const topicProgress = useStore((s) => s.data.topicProgress)
 
   const isActive = useActiveTask.getState().taskId === task.id
-  const initialMinutes = useMemo(() => {
+  const [initial] = useState(() => {
     if (isActive) {
       const el = swElapsed(useStopwatch.getState())
-      if (el >= 30000) return Math.max(1, Math.round(el / 60000))
+      if (el >= 30000) return { minutes: Math.max(1, Math.round(el / 60000)), fromSw: true }
     }
-    return task.targetMinutes ?? 30
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    return { minutes: task.targetMinutes ?? 30, fromSw: false }
+  })
 
   const questionKind = task.kind === 'soru' || task.kind === 'deneme'
-  const [minutes, setMinutes] = useState(String(initialMinutes))
+  const [minutes, setMinutes] = useState(String(initial.minutes))
   const [showQ, setShowQ] = useState(questionKind || !!task.targetQuestions)
   const [solved, setSolved] = useState('')
   const [correct, setCorrect] = useState('')
@@ -97,7 +96,7 @@ export default function CompleteModal({ date, task, onClose }: { date: string; t
       }
     >
       <div className="space-y-3.5">
-        <GField label={isActive ? 'Çalışma süresi (dk) · kronometreden alındı' : 'Çalışma süresi (dk)'}>
+        <GField label={initial.fromSw ? 'Çalışma süresi (dk) · kronometreden alındı' : 'Çalışma süresi (dk)'}>
           <GInput type="number" min={0} value={minutes} onChange={(e) => setMinutes(e.target.value)} autoFocus />
         </GField>
         {showQ ? (

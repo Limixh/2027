@@ -470,7 +470,7 @@ function TimerTab(): React.JSX.Element {
       </div>
 
       <GlassPanel title="Hazır süreler">
-        <div className={cn('max-h-[60vh] space-y-1 overflow-y-auto', !idle && 'pointer-events-none opacity-60')}>
+        <div className={cn('max-h-[calc(100vh-220px)] space-y-1 overflow-y-auto', !idle && 'pointer-events-none opacity-80')}>
           {PRESETS.map((p) => {
             const on = tm.total === p.min * 60000
             return (

@@ -183,4 +183,5 @@ export function GlassPanel({
 
 /** Panel satırı: seçili olunca Geri Sayım listesindeki gibi parlar */
 export const PANEL_ROW = 'flex items-center gap-3 rounded-2xl px-4 py-2.5 transition'
-export const PANEL_ROW_ON = 'bg-white/[0.12] shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]'
+export const PANEL_ROW_ON =
+  'bg-white/[0.12] shadow-[inset_0_1px_0_rgb(255_255_255/0.25)] [:root:not(.dark)_&]:bg-accent/[0.13] [:root:not(.dark)_&]:shadow-none'

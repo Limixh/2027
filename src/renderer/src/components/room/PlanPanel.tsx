@@ -57,7 +57,7 @@ function TaskRow({ task, index, count, active, onStart, onFinish, onEdit, onDele
       className={cn(
         'group rounded-2xl border px-3.5 py-3 transition',
         active ? 'border-accent/70 bg-accent/15 shadow-[0_0_0_1px_rgb(var(--accent)/0.35)]' : 'border-text/10 bg-text/[0.05] hover:bg-text/[0.08]',
-        task.done && 'opacity-70'
+        task.done && 'bg-text/[0.03]'
       )}
     >
       <div className="flex items-start gap-3">
@@ -85,7 +85,8 @@ function TaskRow({ task, index, count, active, onStart, onFinish, onEdit, onDele
           )}
           {task.scope && <div className="mt-0.5 text-xs text-muted">{task.scope}</div>}
           <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
-            <span className="rounded-md px-1.5 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: color + '26', color }}>
+            <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold text-text" style={{ backgroundColor: color + '40' }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
               {KIND_LABEL[task.kind]}
             </span>
             {task.targetMinutes ? (

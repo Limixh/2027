@@ -184,6 +184,8 @@ input[type='number'] {
   --blob-a: 0.45;
 }
 
+/* Tailwind katmanında: absolute/fixed gibi yardımcı sınıflar position değerini ezebilsin */
+@layer components {
 .glass {
   position: relative;
   isolation: isolate;
@@ -224,6 +226,7 @@ input[type='number'] {
 }
 .glass-press:active {
   transform: scale(0.94);
+}
 }
 
 /* Arka plandaki yavaş hareket eden renk kümeleri */
