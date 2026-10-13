@@ -105,7 +105,11 @@ export async function chat(sender: WebContents, req: AiChatRequest): Promise<voi
       send({ requestId: req.requestId, type: 'error', message: 'Model bu isteği yanıtlamayı reddetti. Soruyu farklı ifade etmeyi deneyin.' })
       return
     }
-    send({ requestId: req.requestId, type: 'done', stopReason: final.stop_reason, model: final.model })
+    const fullText = final.content
+      .filter((b): b is Extract<typeof b, { type: 'text' }> => b.type === 'text')
+      .map((b) => b.text)
+      .join('')
+    send({ requestId: req.requestId, type: 'done', stopReason: final.stop_reason, model: final.model, fullText })
   } catch (err) {
     if (controller.signal.aborted) {
       send({ requestId: req.requestId, type: 'done', stopReason: 'aborted', model: req.model })

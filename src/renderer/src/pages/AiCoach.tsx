@@ -241,8 +241,13 @@ export default function AiCoach(): React.JSX.Element {
   const [includeContext, setIncludeContext] = useState(true)
   const [showContext, setShowContext] = useState(false)
   const [streaming, setStreaming] = useState<{ requestId: string; threadId: string; text: string } | null>(null)
+  // Akış durumu ref'te senkron tutulur: aynı anda birden çok parça gelirse
+  // React yeniden çizmeden önce bile hiçbir parça kaybolmaz.
   const streamRef = useRef(streaming)
-  streamRef.current = streaming
+  const setStream = useCallback((next: typeof streaming) => {
+    streamRef.current = next
+    setStreaming(next)
+  }, [])
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -272,7 +277,7 @@ export default function AiCoach(): React.JSX.Element {
       const cur = streamRef.current
       if (!cur || ev.requestId !== cur.requestId) return
       if (ev.type === 'text') {
-        setStreaming({ ...cur, text: cur.text + ev.text })
+        setStream({ ...cur, text: cur.text + ev.text })
         return
       }
       const thread = useStore.getState().data.chats.find((c) => c.id === cur.threadId)
@@ -280,7 +285,7 @@ export default function AiCoach(): React.JSX.Element {
         const msg: ChatMessage =
           ev.type === 'error'
             ? { id: uid(), role: 'assistant', content: ev.message, error: true, createdAt: new Date().toISOString() }
-            : { id: uid(), role: 'assistant', content: cur.text || '(boş yanıt)', createdAt: new Date().toISOString() }
+            : { id: uid(), role: 'assistant', content: ev.fullText || cur.text || '(boş yanıt)', createdAt: new Date().toISOString() }
         if (ev.type === 'done' && ev.stopReason === 'max_tokens') msg.content += '\n\n_(Yanıt uzunluk sınırına ulaştı.)_'
         if (ev.type === 'done' && ev.stopReason === 'aborted' && !cur.text) msg.content = '_(Durduruldu)_'
         // Hata ve tamamlanma durumunda da o ana kadar gelen metni koru
@@ -290,9 +295,9 @@ export default function AiCoach(): React.JSX.Element {
             : []
         upsertChat({ ...thread, messages: [...thread.messages, ...extra, msg], updatedAt: new Date().toISOString() })
       }
-      setStreaming(null)
+      setStream(null)
     })
-  }, [upsertChat])
+  }, [upsertChat, setStream])
 
   // Otomatik kaydırma
   useEffect(() => {
@@ -320,7 +325,7 @@ export default function AiCoach(): React.JSX.Element {
       setActiveId(thread.id)
       setInput('')
       const requestId = uid()
-      setStreaming({ requestId, threadId: thread.id, text: '' })
+      setStream({ requestId, threadId: thread.id, text: '' })
       const st = useStore.getState().data
       if (st.settings.aiProvider === 'cli') {
         void window.api.ai.cliChat({
@@ -339,7 +344,7 @@ export default function AiCoach(): React.JSX.Element {
         messages: toApiMessages(thread.messages)
       })
     },
-    [activeId, includeContext, upsertChat]
+    [activeId, includeContext, upsertChat, setStream]
   )
 
   // Analiz sayfasından "AI ile analiz" ile gelindiyse otomatik başlat

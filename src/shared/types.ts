@@ -196,7 +196,8 @@ export interface CliStatus {
 
 export type AiStreamEvent =
   | { requestId: string; type: 'text'; text: string }
-  | { requestId: string; type: 'done'; stopReason: string | null; model: string }
+  /** fullText: modelin tam cevabı (varsa akışla biriken metin yerine bu kullanılır) */
+  | { requestId: string; type: 'done'; stopReason: string | null; model: string; fullText?: string }
   | { requestId: string; type: 'error'; message: string }
 
 export interface DesktopApi {

@@ -134,7 +134,13 @@ export function chat(sender: WebContents, req: CliChatRequest): void {
           finish({ requestId: req.requestId, type: 'error', message: explain(text || stderr) })
         } else {
           if (!gotText && text) send({ requestId: req.requestId, type: 'text', text })
-          finish({ requestId: req.requestId, type: 'done', stopReason: (msg.stop_reason as string) ?? 'end_turn', model: req.model })
+          finish({
+            requestId: req.requestId,
+            type: 'done',
+            stopReason: (msg.stop_reason as string) ?? 'end_turn',
+            model: req.model,
+            fullText: text || undefined
+          })
         }
       }
     }
