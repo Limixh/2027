@@ -1,8 +1,8 @@
 {
-  "version": "1.1.0",
-  "file": "app-1.1.0.json.gz",
-  "sha256": "5bb13b08c62b5dad50c9208252be0364a5ec8e39c07e011b5db936b6197400ed",
+  "version": "1.2.0",
+  "file": "app-1.2.0.json.gz",
+  "sha256": "159c36fa97fe08ac073878f9f7fa3baa7fb99efe67df9a9dce00f6459f3527ed",
   "minShell": "1.1.0",
-  "notes": "Sade renkler, Liquid Glass tarzı tam ekran Sayaç sayfası, otomatik güncelleme",
+  "notes": "AI ile günlük plan ve Çalışma Odası, deneme sonucunu dosyadan okuma, ChatGPT desteği, sadeleştirilmiş Sayaç",
   "date": "2026-10-13"
 }

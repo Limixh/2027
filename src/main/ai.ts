@@ -2,7 +2,8 @@ import Anthropic from '@anthropic-ai/sdk'
 import { app, safeStorage, type WebContents } from 'electron'
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { join } from 'path'
-import type { AiChatRequest, AiStreamEvent } from '../shared/types'
+import type { AiChatRequest, AiStreamEvent, ChatAttachment } from '../shared/types'
+import { readAttachment } from './attachments'
 
 // API anahtarı, Windows'ta DPAPI ile (safeStorage) şifrelenerek kullanıcı klasöründe saklanır.
 const keyFile = (): string => join(app.getPath('userData'), 'anthropic.key')
@@ -58,6 +59,31 @@ function errorMessage(err: unknown): string {
 
 const controllers = new Map<string, AbortController>()
 
+type ImageMime = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'
+
+/** Ekli dosyaları Claude içerik bloklarına çevirir (resim, PDF, metin) */
+function toContent(m: { content: string; attachments?: ChatAttachment[] }): string | Anthropic.Beta.BetaContentBlockParam[] {
+  if (!m.attachments?.length) return m.content
+  const blocks: Anthropic.Beta.BetaContentBlockParam[] = []
+  for (const a of m.attachments) {
+    let data: Buffer
+    try {
+      data = readAttachment(a.rel)
+    } catch {
+      continue
+    }
+    if (a.mime.startsWith('image/')) {
+      blocks.push({ type: 'image', source: { type: 'base64', media_type: a.mime as ImageMime, data: data.toString('base64') } })
+    } else if (a.mime === 'application/pdf') {
+      blocks.push({ type: 'document', title: a.name, source: { type: 'base64', media_type: 'application/pdf', data: data.toString('base64') } })
+    } else {
+      blocks.push({ type: 'text', text: `--- Ek: ${a.name} ---\n${data.toString('utf8')}` })
+    }
+  }
+  blocks.push({ type: 'text', text: m.content || 'Ekteki dosyayı incele.' })
+  return blocks
+}
+
 export async function testKey(model: string): Promise<{ ok: boolean; message: string }> {
   try {
     const res = await client().messages.create({
@@ -89,7 +115,7 @@ export async function chat(sender: WebContents, req: AiChatRequest): Promise<voi
         { type: 'text' as const, text: req.system, cache_control: { type: 'ephemeral' as const } },
         ...(req.context ? [{ type: 'text' as const, text: req.context }] : [])
       ],
-      messages: req.messages
+      messages: req.messages.map((m) => ({ role: m.role, content: toContent(m) }))
     }
     const fallback = supportsFallback(req.model)
       ? { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }

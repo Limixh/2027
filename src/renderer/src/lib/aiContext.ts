@@ -42,6 +42,10 @@ Eylem türleri:
 2. Konu durumu: {"type":"topic_status","subjectId":"...","topic":"...","status":0-4} (0 başlanmadı, 1 çalışılıyor, 2 konu bitti, 3 soru çözüldü, 4 pekişti)
 3. Geri sayım: {"type":"countdown","title":"...","at":"YYYY-MM-DDTHH:mm"}
 4. Hata defteri notu: {"type":"mistake_note","subjectId":"...","topic":"...","text":"hata","lesson":"doğrusu / çıkarılan ders","kind":"bilgi|dikkat|sure|yorum|bos"}
+5. Deneme sonucu ekleme: {"type":"exam","examType":"TYT|AYT","name":"yayın ve deneme adı","date":"YYYY-MM-DD","durationMin":165,"scores":{"tyt-turkce":{"correct":31,"wrong":6,"blank":3}},"mistakes":[{"subjectId":"tyt-turkce","topic":"katalogdaki konu adı","count":2,"kind":"bilgi|dikkat|sure|yorum|bos","note":"kısa açıklama"}]}
+   - Öğrenci bir deneme sonuç belgesi (görsel, PDF ya da metin) paylaşırsa her ders için doğru/yanlış/boş sayılarını oku ve scores'a yaz (yalnızca katalogdaki ders kimlikleri; TYT'de Temel Matematik ve Geometri ayrı dersler: tyt-matematik 30, tyt-geometri 10 soru; AYT'de de ayt-matematik/ayt-geometri ayrı).
+   - Belgede soru bazında cevaplar ve konular varsa yanlış ve boş soruları konulara göre grupla, mistakes'e konu başına toplam sayıyla ekle (yanlışlar için kind varsayılan "bilgi", boşlar için "bos"; öğrenci nedenini söylediyse ona göre). Belgede konu yazmıyor ama soru metinleri (kitapçık sayfaları) varsa yanlış soruların konusunu sorunun içeriğinden belirle. İkisi de yoksa konu uydurma; mistakes'i boş bırak ve öğrenciden konu analizi sayfasını ya da yanlış yaptığı soruların fotoğrafını iste.
+   - Değerleri belgeyle tutarlı tut (D+Y+B ≤ soru sayısı); emin olmadığın satırı açıklamada belirt.
 subjectId için yalnızca konu kataloğundaki kimlikleri, topic için katalogdaki yazımı kullan. Öğrenci eylem istemediyse blok ekleme.`
 
 const pct = (n: number): string => `%${Math.round(n * 100)}`
@@ -212,7 +216,17 @@ export function buildContext(data: AppData): string {
 
   // Konu kataloğu: AI eylemlerinde kullanılacak kimlik ve adlar
   push('', '## Konu kataloğu (eylemlerde subjectId ve konu adı olarak bunları kullan)')
-  for (const subject of relevant) push(`- ${subject.id} (${subject.exam} ${subject.name}): ${subject.topics.map((t) => t.name).join('; ')}`)
+  push('(Köşeli parantez = konu grubu; mümkünse grubun içindeki en uygun konu adını kullan, emin değilsen grup adını yaz)')
+  for (const subject of relevant) {
+    const parts: string[] = []
+    let lastGroup: string | undefined
+    for (const t of subject.topics) {
+      if (t.group && t.group !== lastGroup) parts.push(`[${t.group}] ${t.name}`)
+      else parts.push(t.name)
+      lastGroup = t.group
+    }
+    push(`- ${subject.id} (${subject.exam} ${subject.name}): ${parts.join('; ')}`)
+  }
 
   // Hedefler
   if (data.goals.length) {
@@ -222,6 +236,9 @@ export function buildContext(data: AppData): string {
 
   return lines.join('\n')
 }
+
+export const EXAM_PROMPT =
+  'Ekteki deneme sonuç belgemi oku: ders ders doğru/yanlış/boş sayılarını ve varsa yanlış/boş yaptığım soruların konularını çıkar, kısa bir yorum yap ve denemeyi uygulamaya eklemek için yks-actions bloğu (exam eylemi) ver.'
 
 export const PLAN_PROMPT =
   'Verilerime göre bugün için saatli bir çalışma planı oluştur ve uygulamaya eklenebilmesi için yks-actions bloğu olarak ver. Tekrar zamanı gelen konuları, zayıf konularımı ve günlük hedef süremi dikkate al; konu çalışma ile soru çözümünü dengele.'
@@ -280,8 +297,9 @@ export const AI_MODELS = [
  * önceki konuşma ve yeni soru stdin'den tek mesaj olarak gönderilir.
  */
 export function buildCliPrompt(
-  messages: { role: 'user' | 'assistant'; content: string }[],
-  context: string | undefined
+  messages: { role: 'user' | 'assistant'; content: string; attachments?: { name: string; rel: string; mime: string }[] }[],
+  context: string | undefined,
+  engine: 'claude' | 'codex' = 'claude'
 ): string {
   const history = messages.slice(0, -1)
   const last = messages[messages.length - 1]
@@ -291,6 +309,14 @@ export function buildCliPrompt(
     parts.push(
       `<onceki_konusma>\n${history.map((m) => `${m.role === 'user' ? 'Öğrenci' : 'Koç (sen)'}: ${m.content}`).join('\n\n')}\n</onceki_konusma>`
     )
+  }
+  const files = messages.flatMap((m) => m.attachments ?? [])
+  if (files.length) {
+    const how =
+      engine === 'claude'
+        ? 'Bu dosyalar çalışma klasöründe; Read aracıyla açıp dikkatlice incele:'
+        : 'Görseller bu mesaja eklendi; diğer dosyalar çalışma klasöründe:'
+    parts.push(`<ekli_dosyalar>\n${how}\n${files.map((f) => `- ${f.rel} (${f.name})`).join('\n')}\n</ekli_dosyalar>`)
   }
   parts.push(`Öğrencinin yeni mesajı:\n${last?.content ?? ''}`)
   return parts.join('\n\n')

@@ -134,8 +134,10 @@ export interface Settings {
   /** Ortaöğretim başarı puanı (diploma notu x 5) */
   obp: number
   theme: 'dark' | 'light' | 'system'
-  /** 'cli' = Claude aboneliği (Claude Code CLI), 'api' = API anahtarı */
-  aiProvider: 'cli' | 'api'
+  /** 'cli' = Claude aboneliği (Claude Code CLI), 'api' = Claude API anahtarı, 'codex' = ChatGPT aboneliği (Codex CLI) */
+  aiProvider: 'cli' | 'api' | 'codex'
+  /** Codex için model (boşsa ChatGPT hesabının varsayılanı) */
+  codexModel?: string
   aiModel: string
   aiEffort: 'low' | 'medium' | 'high'
   pomodoroMinutes: number
@@ -208,12 +210,21 @@ export interface AppData {
   plans: Record<string, DailyPlan>
 }
 
+/** Sohbete eklenen dosya (userData/attachments altında saklanır) */
+export interface ChatAttachment {
+  name: string
+  /** userData'ya göre göreli yol, ör. 'attachments/ab12-sonuc.png' */
+  rel: string
+  mime: string
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
   createdAt: string
   error?: boolean
+  attachments?: ChatAttachment[]
   /** Mesajdaki AI eylemleri uygulandı mı / reddedildi mi */
   actionsState?: 'applied' | 'rejected'
 }
@@ -236,7 +247,7 @@ export interface AiChatRequest {
   system: string
   /** Kullanıcının güncel verilerinin özeti (her istekte yenilenir) */
   context?: string
-  messages: { role: 'user' | 'assistant'; content: string }[]
+  messages: { role: 'user' | 'assistant'; content: string; attachments?: ChatAttachment[] }[]
 }
 
 export interface CliChatRequest {
@@ -244,11 +255,15 @@ export interface CliChatRequest {
   model: string
   /** Talimatlar + veriler + sohbet geçmişi + yeni soru (stdin ile gönderilir) */
   prompt: string
+  /** Bu istekte okunacak ekler */
+  attachments?: ChatAttachment[]
 }
 
 export interface CliStatus {
   installed: boolean
   version?: string
+  /** Hesapla giriş yapılmış mı (bilinmiyorsa undefined) */
+  loggedIn?: boolean
 }
 
 export type AiStreamEvent =
@@ -284,6 +299,10 @@ export interface DesktopApi {
     cliStatus(): Promise<CliStatus>
     cliChat(req: CliChatRequest): Promise<void>
     cliAbort(requestId: string): Promise<void>
+    codexStatus(): Promise<CliStatus>
+    codexChat(req: CliChatRequest): Promise<void>
+    codexAbort(requestId: string): Promise<void>
+    saveAttachment(name: string, base64: string): Promise<ChatAttachment>
     onEvent(cb: (ev: AiStreamEvent) => void): () => void
   }
   openExternal(url: string): Promise<void>

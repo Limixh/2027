@@ -1,11 +1,11 @@
-// Çalışma Odası: araç panosu + günün planı. Tam pencere, Liquid Glass.
-import { ArrowLeft, ChevronLeft, ChevronRight, Maximize2, Minimize2, Sparkles } from 'lucide-react'
+// Çalışma Odası: solda tek büyük araç, sağda günün planı. Sade, kutusuz.
+import { ArrowLeft, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { cn } from '@/components/ui'
-import { Aurora, BG_KEY, type Backdrop } from '@/components/glass'
 import { isOverlayOpen } from '@/components/room/parts'
 import PlanPanel from '@/components/room/PlanPanel'
-import WidgetBoard from '@/components/room/WidgetBoard'
+import { loadTool, saveTool, TOOLS, useActiveTask, type ToolType } from '@/components/room/stores'
+import { ToolBody } from '@/components/room/Tools'
 import { addDays, formatDate, todayKey, weekdayName } from '@/lib/date'
 import { useNav } from '@/lib/nav'
 
@@ -15,20 +15,17 @@ export default function Room(): React.JSX.Element {
   const today = todayKey()
   const isToday = date === today
   const [full, setFull] = useState(!!document.fullscreenElement)
-  const [backdrop, setBackdrop] = useState<Backdrop>(() => {
-    try {
-      return (localStorage.getItem(BG_KEY) as Backdrop) || 'aurora'
-    } catch {
-      return 'aurora'
-    }
-  })
-  const changeBackdrop = (b: Backdrop): void => {
-    setBackdrop(b)
-    try {
-      localStorage.setItem(BG_KEY, b)
-    } catch {
-      /* yoksay */
-    }
+  const activeId = useActiveTask((s) => s.taskId)
+  const [tool, setTool] = useState<ToolType>(() => (useActiveTask.getState().taskId ? 'stopwatch' : loadTool()))
+
+  // Görev başlatılınca kronometre otomatik açılır
+  useEffect(() => {
+    if (activeId) setTool('stopwatch')
+  }, [activeId])
+
+  const pickTool = (t: ToolType): void => {
+    setTool(t)
+    saveTool(t)
   }
 
   const toggleFull = (): void => {
@@ -56,51 +53,58 @@ export default function Room(): React.JSX.Element {
     }
   }, [go])
 
+  const dayName = isToday ? 'Bugün' : date === addDays(today, -1) ? 'Dün' : date === addDays(today, 1) ? 'Yarın' : date < today ? 'Geçmiş' : 'Gelecek'
+  const ghost = 'no-drag grid h-9 w-9 place-items-center rounded-full text-muted transition hover:bg-text/[0.07] hover:text-text'
+
   return (
-    <div className="lg-scene relative flex h-full w-full flex-col overflow-hidden bg-bg">
-      {backdrop === 'aurora' && <Aurora />}
-      <div className={cn('drag relative z-10 flex h-16 shrink-0 items-center justify-between px-5 transition-opacity duration-500', full && 'opacity-0 hover:opacity-100')}>
-        <button className="glass glass-press no-drag flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-text" onClick={() => go('dashboard')}>
-          <ArrowLeft size={15} /> Uygulama
-        </button>
-        <div className="no-drag flex items-center gap-4">
-          <h1 className="hidden text-base font-semibold text-text min-[1250px]:block">Çalışma Odası</h1>
-          <div className="glass flex h-10 items-center rounded-full p-1">
-            <button className="grid h-8 w-8 place-items-center rounded-full text-text transition hover:bg-text/10" onClick={() => setDate(addDays(date, -1))} aria-label="Önceki gün" title="Önceki gün">
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              className="flex h-8 min-w-[196px] items-center justify-center gap-2 rounded-full px-3 text-sm text-text transition hover:bg-text/10"
-              onClick={() => setDate(today)}
-              title="Bugüne dön"
-            >
-              <span className={cn('font-semibold', !isToday && 'text-muted')}>{isToday ? 'Bugün' : date === addDays(today, -1) ? 'Dün' : date === addDays(today, 1) ? 'Yarın' : date < today ? 'Geçmiş' : 'Gelecek'}</span>
-              <span className="text-muted">·</span>
-              <span className="font-medium">
-                {formatDate(date, false)} {weekdayName(date)}
-              </span>
-            </button>
-            <button className="grid h-8 w-8 place-items-center rounded-full text-text transition hover:bg-text/10" onClick={() => setDate(addDays(date, 1))} aria-label="Sonraki gün" title="Sonraki gün">
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-        <div className="no-drag mr-[140px] flex items-center gap-2">
-          <button
-            className="glass glass-press flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-text"
-            onClick={() => changeBackdrop(backdrop === 'aurora' ? 'plain' : 'aurora')}
-            title="Arka plan"
-          >
-            <Sparkles size={15} /> {backdrop === 'aurora' ? 'Cam' : 'Sade'}
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-bg">
+      <div className={cn('drag grid h-16 shrink-0 grid-cols-[1fr_auto_1fr] items-center px-8 transition-opacity duration-500', full && 'opacity-0 hover:opacity-100')}>
+        <div className="no-drag flex items-center gap-3">
+          <button className="flex h-9 items-center gap-1.5 rounded-full pr-3 text-sm text-muted transition hover:text-text" onClick={() => go('dashboard')} title="Uygulamaya dön (Esc)">
+            <ArrowLeft size={16} /> Uygulama
           </button>
-          <button className="glass glass-press flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-text" onClick={toggleFull} title="Tam ekran (F11)">
-            {full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-            {full ? 'Küçült' : 'Tam ekran'}
+          <span className="text-sm font-medium text-text">Çalışma Odası</span>
+        </div>
+        <div className="no-drag flex items-center gap-1">
+          <button className={ghost} onClick={() => setDate(addDays(date, -1))} aria-label="Önceki gün" title="Önceki gün">
+            <ChevronLeft size={16} />
+          </button>
+          <button className="flex h-9 min-w-[176px] items-center justify-center gap-2 rounded-full px-3 text-sm transition hover:bg-text/[0.07]" onClick={() => setDate(today)} title="Bugüne dön">
+            <span className={cn('font-medium', isToday ? 'text-text' : 'text-muted')}>{dayName}</span>
+            <span className="text-muted">
+              {formatDate(date, false)} {weekdayName(date)}
+            </span>
+          </button>
+          <button className={ghost} onClick={() => setDate(addDays(date, 1))} aria-label="Sonraki gün" title="Sonraki gün">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+        <div className="no-drag mr-[140px] flex items-center justify-end">
+          <button className={ghost} onClick={toggleFull} aria-label="Tam ekran" title="Tam ekran (F11)">
+            {full ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
         </div>
       </div>
-      <div className="relative z-10 grid min-h-0 flex-1 animate-fade-in grid-cols-[minmax(0,1fr)_380px] gap-5 px-5 pb-5">
-        <WidgetBoard />
+
+      <div className="grid min-h-0 flex-1 animate-fade-in grid-cols-[minmax(0,1fr)_minmax(340px,400px)] gap-x-12 px-8 pb-8 min-[1300px]:gap-x-20 min-[1300px]:px-14">
+        <section className="flex min-h-0 min-w-0 flex-col items-center">
+          <div className="flex h-9 shrink-0 items-center gap-1" role="tablist" aria-label="Araç">
+            {TOOLS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={tool === t.id}
+                onClick={() => pickTool(t.id)}
+                className={cn('h-9 rounded-full px-3.5 text-sm transition', tool === t.id ? 'bg-text/[0.07] font-medium text-text' : 'text-muted hover:text-text')}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center pb-10 text-center">
+            <ToolBody key={tool} tool={tool} />
+          </div>
+        </section>
         <PlanPanel key={date} date={date} isToday={isToday} />
       </div>
     </div>

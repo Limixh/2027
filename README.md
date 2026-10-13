@@ -14,6 +14,7 @@ YKS 2027'ye hazırlanırken çalışmanı, denemelerini, konu ilerlemeni ve hata
 | **Konu Takibi** | Tüm TYT/AYT konuları; durum (başlanmadı → pekişti), öz güven, aralıklı tekrar hatırlatmaları, konu bazında çözülen soru ve deneme hataları |
 | **Hata Analizi** | Hangi konularda yanlışın var: öncelik puanlı zayıf konu listesi, ders performans tablosu, hata türü dağılımı, otomatik içgörüler |
 | **Hata Defteri** | Yanlış yaptığın soruları not al, "doğrusu/çıkardığım ders" yaz, kart modunda tekrar et |
+| **Çalışma Odası** | Sade, tam ekran çalışma sayfası: solda tek araç (saat / geri sayım / kronometre / YKS'ye kalan), sağda günün planı. Görevi "Bitti" deyince çalışma kaydı eklenir ve konu durumu otomatik güncellenir |
 | **AI Koç** | Claude'a bağlan; tüm verilerin otomatik özetlenip gönderilir. Deneme analizi, haftalık program, zayıf konu stratejisi... |
 | **Sayaç** | Tam ekran, sade (Apple tarzı) sayfa: YKS ve kendi geri sayımların, turlu kronometre, zamanlayıcı. F11 = tam ekran, Esc = çıkış |
 | **Ayarlar** | Alan (SAY/EA/SÖZ/DİL), hedef netler, OBP, sınav tarihi, tema (koyu/açık), yedek al/yükle, örnek veri |
@@ -61,6 +62,17 @@ Uygulama, bilgisayarına kurulu **Claude Code**'u arka planda çalıştırır; C
 3. Uygulamada **AI Koç → Bağlantıyı kontrol et**. Hazır.
 
 Model menüsünden Opus 5.5 / Sonnet 5.5 / Haiku 5.5 seçebilirsin (aboneliğinin izin verdiği kadarıyla). Kullanım, aboneliğinin limitlerinden düşer.
+
+### ChatGPT aboneliğiyle (Plus/Pro)
+1. [Node.js](https://nodejs.org) (LTS) kur.
+2. PowerShell'de: `npm install -g @openai/codex`
+3. Ardından: `codex login` → "Sign in with ChatGPT".
+4. AI Koç'ta bağlantı türünü **ChatGPT (abonelik)** seç.
+
+### AI neler yapabilir?
+- **Günlük plan:** "Bugünün planını oluştur" → plan kartı → **Onayla** → Çalışma Odası'nda görev listesi.
+- **Deneme sonucu ekleme:** 📎 ile deneme sonuç belgesinin ekran görüntüsünü / PDF'ini ekle (veya Ctrl+V ile yapıştır) ve gönder. AI ders ders D/Y/B'yi ve varsa yanlışların konularını okur; onaylayınca deneme kaydedilir.
+- Konu durumu güncelleme, geri sayım ve hata defteri notu ekleme — hepsi senin onayınla.
 
 ### B) Kurulumsuz: claude.ai'ye kopyala-yapıştır
 AI Koç sayfasında bir soruya tıkla → verilerin panoya kopyalanır ve claude.ai açılır → mesaj kutusuna **Ctrl+V**, Enter.

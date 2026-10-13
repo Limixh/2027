@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFil
 import { join } from 'path'
 import * as ai from './ai'
 import * as cli from './claudeCli'
+import * as codex from './codexCli'
+import { saveAttachment } from './attachments'
 import * as updater from './updater'
 import type { AiChatRequest, AppData, CliChatRequest } from '../shared/types'
 
@@ -134,6 +136,10 @@ function registerIpc(): void {
   ipcMain.handle('update:status', () => updater.getStatus())
   ipcMain.handle('update:check', (e) => updater.check(e.sender))
   ipcMain.handle('update:install', () => updater.install())
+  ipcMain.handle('codex:status', () => codex.status())
+  ipcMain.handle('codex:chat', (e, req: CliChatRequest) => codex.chat(e.sender, req))
+  ipcMain.handle('codex:abort', (_e, id: string) => codex.abort(id))
+  ipcMain.handle('ai:saveAttachment', (_e, name: string, b64: string) => saveAttachment(name, b64))
   ipcMain.handle('cli:status', () => cli.status())
   ipcMain.handle('cli:chat', (e, req: CliChatRequest) => cli.chat(e.sender, req))
   ipcMain.handle('cli:abort', (_e, id: string) => cli.abort(id))

@@ -14,47 +14,30 @@ export const useActiveTask = create<ActiveTaskState>((set) => ({
   clear: () => set({ date: undefined, taskId: undefined, startedAt: undefined })
 }))
 
-/** Pomodoro: odaklanma / mola döngüsü. */
-export type PomoPhase = 'work' | 'break'
-interface PomodoroState {
-  phase: PomoPhase
-  /** Çalışırken bitiş anı */
-  endsAt?: number
-  /** Duraklatıldığında kalan (ms) */
-  remaining?: number
-  /** Tamamlanan odaklanma sayısı */
-  cycles: number
-  set(p: Partial<PomodoroState>): void
-}
-export const usePomodoro = create<PomodoroState>((set) => ({ phase: 'work', cycles: 0, set: (p) => set(p) }))
+/* ---------- Seçili araç (localStorage) ---------- */
 
-/* ---------- Araç listesi (localStorage) ---------- */
+export type ToolType = 'clock' | 'timer' | 'stopwatch' | 'exam'
+export const TOOL_KEY = 'yks-room-tool'
+export const TOOLS: { id: ToolType; label: string }[] = [
+  { id: 'clock', label: 'Saat' },
+  { id: 'timer', label: 'Geri sayım' },
+  { id: 'stopwatch', label: 'Kronometre' },
+  { id: 'exam', label: 'YKS’ye kalan' }
+]
 
-export type WidgetType = 'clock' | 'timer' | 'stopwatch' | 'pomodoro' | 'exam' | 'progress'
-export const WIDGET_KEY = 'yks-room-widgets'
-export const DEFAULT_WIDGETS: WidgetType[] = ['clock', 'timer', 'stopwatch', 'progress', 'exam']
-const ALL: WidgetType[] = ['clock', 'timer', 'stopwatch', 'pomodoro', 'exam', 'progress']
-
-export function loadWidgets(): WidgetType[] {
+export function loadTool(): ToolType {
   try {
-    const raw = localStorage.getItem(WIDGET_KEY)
-    if (raw) {
-      const arr = JSON.parse(raw) as unknown
-      if (Array.isArray(arr)) {
-        const out: WidgetType[] = []
-        for (const x of arr) if (ALL.includes(x as WidgetType) && !out.includes(x as WidgetType)) out.push(x as WidgetType)
-        return out
-      }
-    }
+    const raw = localStorage.getItem(TOOL_KEY)
+    if (TOOLS.some((t) => t.id === raw)) return raw as ToolType
   } catch {
     /* yoksay */
   }
-  return DEFAULT_WIDGETS
+  return 'clock'
 }
 
-export function saveWidgets(list: WidgetType[]): void {
+export function saveTool(t: ToolType): void {
   try {
-    localStorage.setItem(WIDGET_KEY, JSON.stringify(list))
+    localStorage.setItem(TOOL_KEY, t)
   } catch {
     /* yoksay */
   }

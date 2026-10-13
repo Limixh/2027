@@ -1,8 +1,10 @@
 // AI Koç'un cevabındaki ```yks-actions``` bloğunu okur ve onaylanınca uygular.
 // Böylece AI sadece sohbet etmez; plan oluşturur, konu durumunu günceller vb.
-import type { MistakeKind, PlanTask, PlanTaskKind, TopicStatus } from '../../../shared/types'
+import type { ExamMistake, ExamType, MistakeKind, PlanTask, PlanTaskKind, SubjectScore, TopicStatus } from '../../../shared/types'
 import { SUBJECT_MAP } from '@/data/curriculum'
 import { formatDate, todayKey, weekdayName } from './date'
+import { fmtNet, round2 } from './exam'
+import { uid } from './id'
 import { useStore } from './store'
 
 export interface AiPlanTask {
@@ -23,8 +25,48 @@ export type AiAction =
   | { type: 'topic_status'; subjectId: string; topic: string; status: number }
   | { type: 'countdown'; title: string; at: string }
   | { type: 'mistake_note'; subjectId: string; topic?: string; text: string; lesson?: string; kind?: string }
+  | {
+      type: 'exam'
+      examType: string
+      name?: string
+      date?: string
+      durationMin?: number
+      scores: Record<string, { correct?: number; wrong?: number; blank?: number }>
+      mistakes?: { subjectId: string; topic?: string; count?: number; kind?: string; note?: string }[]
+    }
 
 const FENCE = '```yks-actions'
+
+/** Modelin bazen eksik bıraktığı kapanış parantezlerini tamamlar, sondaki virgülleri temizler */
+export function repairJson(raw: string): string {
+  const stack: string[] = []
+  let inStr = false
+  let esc = false
+  for (const ch of raw) {
+    if (inStr) {
+      if (esc) esc = false
+      else if (ch === '\\') esc = true
+      else if (ch === '"') inStr = false
+      continue
+    }
+    if (ch === '"') inStr = true
+    else if (ch === '{') stack.push('}')
+    else if (ch === '[') stack.push(']')
+    else if ((ch === '}' || ch === ']') && stack[stack.length - 1] === ch) stack.pop()
+  }
+  let out = raw.trim().replace(/,\s*$/, '')
+  if (inStr) out += '"'
+  out += stack.reverse().join('')
+  return out.replace(/,\s*([}\]])/g, '$1')
+}
+
+function parseLoose(raw: string): unknown {
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return JSON.parse(repairJson(raw))
+  }
+}
 
 /** Mesajı görünen metin ve eylemler olarak ayırır. Akış sırasında blok yarımsa pending=true */
 export function splitActions(content: string): { text: string; actions: AiAction[] | null; pending: boolean; error?: string } {
@@ -36,7 +78,7 @@ export function splitActions(content: string): { text: string; actions: AiAction
   if (end < 0) return { text, actions: null, pending: true }
   const after = rest.slice(end + 3).trim()
   try {
-    const parsed = JSON.parse(rest.slice(0, end).trim()) as { actions?: unknown } | unknown[]
+    const parsed = parseLoose(rest.slice(0, end).trim()) as { actions?: unknown } | unknown[]
     const list = Array.isArray(parsed) ? parsed : (parsed as { actions?: unknown }).actions
     if (!Array.isArray(list)) throw new Error('actions dizisi yok')
     const actions = list.filter((a): a is AiAction => !!a && typeof a === 'object' && typeof (a as { type?: unknown }).type === 'string')
@@ -64,6 +106,9 @@ export function resolveTopic(subjectId: string | undefined, name: string | undef
   if (exact) return exact.id
   const contains = subject.topics.find((t) => fold(t.name).includes(q) || q.includes(fold(t.name)))
   if (contains) return contains.id
+  // "Optik", "Katı Cisimler" gibi grup adları: grubun ilk konusuna bağla
+  const group = subject.topics.find((t) => t.group && (fold(t.group) === q || q.includes(fold(t.group)) || fold(t.group).includes(q)))
+  if (group) return group.id
   const words = new Set(q.split(' ').filter((w) => w.length > 2))
   let best: { id: string; score: number } | undefined
   for (const t of subject.topics) {
@@ -99,6 +144,63 @@ export function toPlanTask(t: AiPlanTask): Omit<PlanTask, 'id' | 'done'> {
   }
 }
 
+const int = (n: unknown): number => (typeof n === 'number' && n > 0 ? Math.round(n) : 0)
+
+/** AI'nin deneme verisini doğrulanmış biçime çevirir */
+export function normalizeExam(a: Extract<AiAction, { type: 'exam' }>): {
+  type: ExamType
+  name: string
+  date: string
+  durationMin?: number
+  scores: Record<string, SubjectScore>
+  mistakes: ExamMistake[]
+  warnings: string[]
+} {
+  const type: ExamType = a.examType?.toUpperCase() === 'AYT' ? 'AYT' : 'TYT'
+  const warnings: string[] = []
+  const scores: Record<string, SubjectScore> = {}
+  for (const [id, v] of Object.entries(a.scores ?? {})) {
+    const subject = SUBJECT_MAP[id]
+    if (!subject || subject.exam !== type) {
+      warnings.push(`Bilinmeyen ders atlandı: ${id}`)
+      continue
+    }
+    let correct = int(v?.correct)
+    let wrong = int(v?.wrong)
+    let blank = int(v?.blank)
+    if (correct + wrong + blank > subject.questionCount) {
+      warnings.push(`${subject.name}: D+Y+B soru sayısını (${subject.questionCount}) aşıyor, kırpıldı`)
+      correct = Math.min(correct, subject.questionCount)
+      wrong = Math.min(wrong, subject.questionCount - correct)
+      blank = Math.min(blank, subject.questionCount - correct - wrong)
+    }
+    scores[id] = { correct, wrong, blank }
+  }
+  const mistakes: ExamMistake[] = []
+  for (const m of a.mistakes ?? []) {
+    if (!SUBJECT_MAP[m.subjectId] || !scores[m.subjectId]) continue
+    const topicId = resolveTopic(m.subjectId, m.topic)
+    if (!topicId) warnings.push(`Konu eşleşmedi: ${m.topic ?? '?'}`)
+    mistakes.push({
+      id: uid(),
+      subjectId: m.subjectId,
+      topicId: topicId ?? '',
+      count: Math.max(1, int(m.count)),
+      kind: MISTAKE_KINDS.includes(m.kind as MistakeKind) ? (m.kind as MistakeKind) : 'bilgi',
+      note: [topicId ? '' : m.topic, m.note].filter(Boolean).join(' — ') || undefined
+    })
+  }
+  return {
+    type,
+    name: a.name?.trim() || `${type} denemesi`,
+    date: validDate(a.date) ? a.date : todayKey(),
+    durationMin: num(a.durationMin),
+    scores,
+    mistakes,
+    warnings
+  }
+}
+
 export const planDate = (a: Extract<AiAction, { type: 'plan' }>): string => (validDate(a.date) ? a.date : todayKey())
 
 export function describeAction(a: AiAction): string {
@@ -115,6 +217,11 @@ export function describeAction(a: AiAction): string {
       return `Geri sayım: ${a.title} (${a.at.replace('T', ' ')})`
     case 'mistake_note':
       return `Hata defterine not: ${SUBJECT_MAP[a.subjectId]?.name ?? ''} — ${a.text.slice(0, 60)}`
+    case 'exam': {
+      const e = normalizeExam(a)
+      const total = round2(Object.values(e.scores).reduce((t, s) => t + s.correct - s.wrong / 4, 0))
+      return `${e.type} denemesi ekle: ${e.name} (${formatDate(e.date)}) — toplam ${fmtNet(total)} net`
+    }
   }
 }
 
@@ -136,6 +243,12 @@ export function applyAction(a: AiAction, mode: 'replace' | 'append' = 'replace')
     case 'countdown': {
       if (!a.title || !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/.test(a.at)) return 'Geçersiz tarih'
       st.addCountdown({ title: a.title, at: a.at.includes('T') ? a.at : `${a.at}T09:00` })
+      return null
+    }
+    case 'exam': {
+      const e = normalizeExam(a)
+      if (!Object.keys(e.scores).length) return 'Denemede geçerli ders sonucu yok'
+      st.addExam({ type: e.type, name: e.name, date: e.date, durationMin: e.durationMin, scores: e.scores, mistakes: e.mistakes, note: 'AI Koç ile eklendi' })
       return null
     }
     case 'mistake_note': {

@@ -1,9 +1,9 @@
 // Tam ekran sayaç: geri sayım listesi, kronometre ve zamanlayıcı.
 // Kenar çubuğu olmadan tüm pencereyi kaplar; tam ekran (F11) desteklenir.
-import { ArrowLeft, Bell, Flag, Maximize2, Minimize2, Pause, Play, Plus, RotateCcw, Save, Sparkles, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Maximize2, Minimize2, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { cn, toast } from '@/components/ui'
-import { Aurora, BG_KEY, BigNumber, CircleButton, Dial, GlassPanel, PANEL_ROW, PANEL_ROW_ON, PillButton, type Backdrop } from '@/components/glass'
+import { Aurora, BG_KEY, BigNumber, type Backdrop } from '@/components/glass'
 import { beep, fmtSw, fmtTimer, swElapsed, useCountdownTimer, useStopwatch, useTicker } from '@/lib/clocks'
 import { formatDate, pad, todayKey } from '@/lib/date'
 import { useNav } from '@/lib/nav'
@@ -148,6 +148,51 @@ function CountdownTab(): React.JSX.Element {
   )
 }
 
+/* ---------- Kronometre / Zamanlayıcı ortak parçaları ---------- */
+
+/** Sade hap düğme: hafif yüzey tonu; yeşil/kırmızı yalnızca yazı rengi ve çok açık zemin */
+function SimpleButton({
+  children,
+  onClick,
+  tone = 'neutral',
+  disabled
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  tone?: 'neutral' | 'go' | 'stop'
+  disabled?: boolean
+}): React.JSX.Element {
+  const tones = {
+    neutral: 'bg-text/[0.07] text-text hover:bg-text/[0.12]',
+    go: 'bg-success/[0.12] text-success hover:bg-success/[0.2]',
+    stop: 'bg-danger/[0.12] text-danger hover:bg-danger/[0.2]'
+  }
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'h-11 min-w-[124px] rounded-full px-6 text-[15px] font-medium transition active:scale-[0.97] disabled:pointer-events-none disabled:opacity-35',
+        tones[tone]
+      )}
+    >
+      {children}
+    </button>
+  )
+}
+
+/** Sağ listelerin küçük başlığı */
+function ListTitle({ children, right }: { children: React.ReactNode; right?: React.ReactNode }): React.JSX.Element {
+  return (
+    <div className="mb-2 flex items-center justify-between px-1">
+      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{children}</span>
+      {right}
+    </div>
+  )
+}
+
+const ROW = 'flex items-center gap-3 border-b border-text/10 px-1 py-3 last:border-b-0'
+
 /* ---------- Kronometre ---------- */
 
 function StopwatchTab(): React.JSX.Element {
@@ -181,133 +226,94 @@ function StopwatchTab(): React.JSX.Element {
   const reset = (): void => sw.set({ running: false, startedAt: undefined, acc: 0, laps: [] })
 
   const [main, cs] = fmtSw(elapsed).split(',')
-  const sec = (elapsed % 60000) / 60000
   const canSave = !sw.running && elapsed >= 60000
 
   return (
     <div className="grid h-full w-full grid-cols-1 gap-10 lg:grid-cols-[1fr_360px]">
-      <div className="flex flex-col items-center justify-center">
-        <Dial
-          svg={
-            <>
-              <circle r={41} fill="none" stroke="rgb(var(--text) / 0.06)" strokeWidth={1.2} />
-              <circle
-                r={41}
-                fill="none"
-                stroke="rgb(var(--warning))"
-                strokeOpacity={0.55}
-                strokeWidth={1.2}
-                pathLength={100}
-                strokeDasharray={`${sec * 100} 100`}
-                transform="rotate(-90)"
-              />
-              <g transform={`rotate(${sec * 360})`} style={{ filter: 'drop-shadow(0 0 1.2px rgb(var(--warning) / 0.8))' }}>
-                <line y1={-35} y2={-49.2} stroke="rgb(var(--warning))" strokeWidth={0.9} strokeLinecap="round" />
-                <circle cy={-41} r={1.6} fill="rgb(var(--warning))" />
-              </g>
-            </>
-          }
-        >
-          <div className="mb-[calc(var(--d)*0.02)] text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">
-            {sw.running ? 'Çalışıyor' : elapsed > 0 ? 'Durduruldu' : 'Hazır'}
-          </div>
-          <div
-            className="tabular flex items-baseline font-extralight leading-none tracking-tight text-text"
-            style={{ fontSize: `calc(var(--d) * ${main.length > 5 ? 0.15 : 0.2})` }}
-          >
-            <span>{main}</span>
-            <span className="ml-0.5 text-[0.48em] text-muted">,{cs}</span>
-          </div>
-          <div className="tabular mt-[calc(var(--d)*0.03)] h-5 text-sm text-muted">
-            {sw.laps.length > 0 && (
-              <>
-                Tur {sw.laps.length + 1} · {fmtSw(currentLap)}
-              </>
-            )}
-          </div>
-        </Dial>
-        <div className="mt-8 flex items-center gap-3">
-          {sw.running ? (
-            <PillButton onClick={lap} icon={<Flag size={16} />}>
-              Tur
-            </PillButton>
-          ) : (
-            <PillButton onClick={reset} disabled={elapsed === 0} icon={<RotateCcw size={16} />}>
-              Sıfırla
-            </PillButton>
+      <div className="flex flex-col items-center justify-center text-center">
+        <div className="mb-6 text-sm font-semibold uppercase tracking-[0.25em] text-muted">
+          {sw.running ? 'Çalışıyor' : elapsed > 0 ? 'Durduruldu' : 'Kronometre'}
+        </div>
+        <div
+          className={cn(
+            'tabular relative font-extralight leading-none tracking-tight text-text',
+            main.length > 5 ? 'text-[clamp(56px,10vw,150px)]' : 'text-[clamp(64px,14vw,200px)]'
           )}
-          {sw.running ? (
-            <PillButton tone="stop" onClick={stop} icon={<Pause size={16} />}>
-              Durdur
-            </PillButton>
-          ) : (
-            <PillButton tone="go" onClick={start} icon={<Play size={16} />}>
-              {elapsed ? 'Devam' : 'Başlat'}
-            </PillButton>
+        >
+          {main}
+          <span className="absolute bottom-0 left-full ml-1 text-[0.4em] leading-[1.05] text-muted">,{cs}</span>
+        </div>
+        <div className="tabular mt-6 h-5 text-sm text-muted">
+          {sw.laps.length > 0 && (
+            <>
+              Tur {sw.laps.length + 1} · {fmtSw(currentLap)}
+            </>
           )}
         </div>
-      </div>
-
-      <GlassPanel
-        title="Turlar"
-        action={lapTimes.length > 0 ? <span className="tabular text-xs text-muted">{lapTimes.length} tur</span> : undefined}
-        footer={
-          canSave && (
+        <div className="mt-8 flex items-center gap-3">
+          {sw.running ? (
+            <SimpleButton onClick={lap}>Tur</SimpleButton>
+          ) : (
+            <SimpleButton onClick={reset} disabled={elapsed === 0}>
+              Sıfırla
+            </SimpleButton>
+          )}
+          {sw.running ? (
+            <SimpleButton tone="stop" onClick={stop}>
+              Durdur
+            </SimpleButton>
+          ) : (
+            <SimpleButton tone="go" onClick={start}>
+              {elapsed ? 'Devam' : 'Başlat'}
+            </SimpleButton>
+          )}
+        </div>
+        <div className="mt-4 h-8">
+          {canSave && (
             <button
-              className="mt-2 flex h-11 items-center justify-center gap-2 rounded-2xl text-sm font-medium text-muted transition hover:bg-white/[0.08] hover:text-text"
+              className="text-sm text-muted transition hover:text-text"
               onClick={() => {
                 addSession({ date: todayKey(), minutes: Math.round(elapsed / 60000), kind: 'diger', note: 'Kronometre' })
                 toast(`${Math.round(elapsed / 60000)} dk çalışma olarak kaydedildi`)
                 reset()
               }}
             >
-              <Save size={15} /> Çalışma olarak kaydet
+              Çalışma olarak kaydet
             </button>
-          )
-        }
-      >
+          )}
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-col self-center">
         {rows.length === 0 ? (
-          <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 px-8 text-center text-sm text-muted">
-            <Flag size={22} className="opacity-60" />
-            Tur almak için çalışırken Tur’a bas
-          </div>
+          <div className="px-1 text-sm text-muted">Tur almak için çalışırken Tur’a bas.</div>
         ) : (
-          <div className="max-h-[52vh] space-y-1 overflow-y-auto">
-            {rows.map(({ n, t, live }) => {
-              const isBest = !live && t === best && best !== worst
-              const isWorst = !live && t === worst && best !== worst
-              return (
-                <div key={n} className={cn(PANEL_ROW, live && PANEL_ROW_ON)}>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[15px] font-medium">Tur {n}</div>
-                    {(live || isBest || isWorst) && (
-                      <div
-                        className={cn(
-                          'text-xs',
-                          live && 'text-muted',
-                          isBest && 'font-semibold text-success dark:text-[#7fd6a0]',
-                          isWorst && 'font-semibold text-danger dark:text-[#f08f8f]'
-                        )}
-                      >
-                        {live ? (sw.running ? 'Devam ediyor' : 'Durduruldu') : isBest ? 'En hızlı' : 'En yavaş'}
-                      </div>
-                    )}
+          <>
+            <ListTitle right={lapTimes.length > 0 ? <span className="tabular text-xs text-muted">{lapTimes.length} tur</span> : undefined}>
+              Turlar
+            </ListTitle>
+            <div className="max-h-[56vh] overflow-y-auto">
+              {rows.map(({ n, t, live }) => {
+                const isBest = !live && t === best && best !== worst
+                const isWorst = !live && t === worst && best !== worst
+                return (
+                  <div key={n} className={ROW}>
+                    <div className={cn('flex-1 text-[15px]', live ? 'text-muted' : 'text-text')}>Tur {n}</div>
+                    <div
+                      className={cn(
+                        'tabular text-xl font-light',
+                        live ? 'text-muted' : isBest ? 'text-success' : isWorst ? 'text-danger' : 'text-text/90'
+                      )}
+                    >
+                      {fmtSw(t)}
+                    </div>
                   </div>
-                  <div
-                    className={cn(
-                      'tabular text-xl font-light text-text/90',
-                      isBest && 'text-success dark:text-[#7fd6a0]',
-                      isWorst && 'text-danger dark:text-[#f08f8f]'
-                    )}
-                  >
-                    {fmtSw(t)}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          </>
         )}
-      </GlassPanel>
+      </div>
     </div>
   )
 }
@@ -364,126 +370,91 @@ function TimerTab(): React.JSX.Element {
   }
 
   const frac = idle ? 1 : Math.max(0, Math.min(1, left / tm.total))
-  const ringColor = done ? 'rgb(var(--success))' : 'rgb(var(--accent))'
   const clock = fmtTimer(left)
+  const stepBtn = 'rounded-full px-3 py-1 text-sm text-muted transition hover:text-text disabled:pointer-events-none disabled:opacity-30'
 
   return (
     <div className="grid h-full w-full grid-cols-1 gap-10 lg:grid-cols-[1fr_360px]">
-      <div className="flex flex-col items-center justify-center">
-        <div
-          onWheel={(e) => {
-            if (idle) adjust(e.deltaY < 0 ? 60000 : -60000)
-          }}
-        >
-          <Dial
-            svg={
-              <>
-                <circle r={40} fill="none" stroke="rgb(var(--text) / 0.08)" strokeWidth={2.2} />
-                {frac > 0.001 && (
-                  <circle
-                    r={40}
-                    fill="none"
-                    stroke={ringColor}
-                    strokeOpacity={idle && !done ? 0.4 : 1}
-                    strokeWidth={2.2}
-                    strokeLinecap="round"
-                    pathLength={1}
-                    strokeDasharray={`${frac} 2`}
-                    strokeDashoffset={-(1 - frac)}
-                    transform="rotate(-90)"
-                    style={{
-                      transition: 'stroke-opacity .4s',
-                      filter: running ? 'drop-shadow(0 0 1.5px rgb(var(--accent) / 0.7))' : undefined
-                    }}
-                  />
-                )}
-              </>
-            }
-          >
-            {done ? (
-              <>
-                <Bell size={28} className="mb-2 text-success" />
-                <div className="font-extralight leading-none tracking-tight text-text" style={{ fontSize: 'calc(var(--d) * 0.13)' }}>
-                  Süre doldu
-                </div>
-                <div className="tabular mt-3 text-sm text-muted">{fmtTimer(tm.total)} tamamlandı</div>
-              </>
-            ) : (
-              <>
-                <div className="mb-[calc(var(--d)*0.02)] text-[11px] font-semibold uppercase tracking-[0.25em] text-muted">
-                  {idle ? 'Süre' : paused ? 'Duraklatıldı' : 'Kalan'}
-                </div>
-                <div
-                  className="tabular font-extralight leading-none tracking-tight text-text"
-                  style={{ fontSize: `calc(var(--d) * ${clock.length > 5 ? 0.15 : 0.2})` }}
-                >
-                  {clock}
-                </div>
-                {idle ? (
-                  <div className="mt-[calc(var(--d)*0.04)] flex items-center gap-4">
-                    <CircleButton label="5 dk azalt" onClick={() => adjust(-5 * 60000)} disabled={tm.total <= MIN_TOTAL}>
-                      −5
-                    </CircleButton>
-                    <CircleButton label="5 dk artır" onClick={() => adjust(5 * 60000)} disabled={tm.total >= MAX_TOTAL}>
-                      +5
-                    </CircleButton>
-                  </div>
-                ) : (
-                  <div className="h-[calc(var(--d)*0.04)]" />
-                )}
-                <div className="tabular mt-[calc(var(--d)*0.04)] flex items-center gap-1.5 text-sm text-muted">
-                  <Bell size={13} />
-                  {paused ? 'duraklatıldı' : `bitiş ≈ ${endClock(left)}`}
-                </div>
-              </>
-            )}
-          </Dial>
+      <div
+        className="flex flex-col items-center justify-center text-center"
+        onWheel={(e) => {
+          if (idle) adjust(e.deltaY < 0 ? 60000 : -60000)
+        }}
+      >
+        <div className="mb-6 text-sm font-semibold uppercase tracking-[0.25em] text-muted">
+          {done ? 'Zamanlayıcı' : idle ? 'Süre' : paused ? 'Duraklatıldı' : 'Kalan'}
         </div>
+        {done ? (
+          <div className="tabular font-extralight leading-none tracking-tight text-text text-[clamp(48px,9vw,128px)]">Süre doldu</div>
+        ) : (
+          <div
+            className={cn(
+              'tabular font-extralight leading-none tracking-tight text-text',
+              clock.length > 5 ? 'text-[clamp(56px,10vw,150px)]' : 'text-[clamp(64px,14vw,200px)]'
+            )}
+          >
+            {clock}
+          </div>
+        )}
+
+        {/* Alt satır: ayar düğmeleri (boştayken) ya da ince ilerleme çizgisi */}
+        <div className="mt-6 flex h-8 w-[min(420px,70%)] items-center justify-center">
+          {idle && !done ? (
+            <div className="flex items-center gap-4">
+              <button className={stepBtn} onClick={() => adjust(-5 * 60000)} disabled={tm.total <= MIN_TOTAL} aria-label="5 dk azalt">
+                − 5 dk
+              </button>
+              <button className={stepBtn} onClick={() => adjust(5 * 60000)} disabled={tm.total >= MAX_TOTAL} aria-label="5 dk artır">
+                + 5 dk
+              </button>
+            </div>
+          ) : done ? (
+            <span className="tabular text-sm text-muted">{fmtTimer(tm.total)} tamamlandı</span>
+          ) : (
+            <div className="h-0.5 w-full overflow-hidden rounded-full bg-text/15">
+              <div className="h-full bg-accent" style={{ width: `${frac * 100}%` }} />
+            </div>
+          )}
+        </div>
+        <div className="tabular mt-1 h-5 text-sm text-muted">{!done && !paused && `bitiş ≈ ${endClock(left)}`}</div>
+
         <div className="mt-8 flex items-center gap-3">
           {done ? (
-            <PillButton onClick={() => tm.set({ done: false })} icon={<X size={16} />}>
-              Tamam
-            </PillButton>
+            <SimpleButton onClick={() => tm.set({ done: false })}>Tamam</SimpleButton>
           ) : (
-            <PillButton
-              onClick={() => tm.set({ endsAt: undefined, remaining: undefined, done: false })}
-              disabled={idle}
-              icon={<X size={16} />}
-            >
+            <SimpleButton onClick={() => tm.set({ endsAt: undefined, remaining: undefined, done: false })} disabled={idle}>
               İptal
-            </PillButton>
+            </SimpleButton>
           )}
           {running ? (
-            <PillButton tone="stop" onClick={() => tm.set({ endsAt: undefined, remaining: left })} icon={<Pause size={16} />}>
+            <SimpleButton tone="stop" onClick={() => tm.set({ endsAt: undefined, remaining: left })}>
               Duraklat
-            </PillButton>
+            </SimpleButton>
           ) : (
-            <PillButton
-              tone="go"
-              onClick={() => (idle ? start() : tm.set({ endsAt: Date.now() + left, remaining: undefined }))}
-              icon={<Play size={16} />}
-            >
+            <SimpleButton tone="go" onClick={() => (idle ? start() : tm.set({ endsAt: Date.now() + left, remaining: undefined }))}>
               {done ? 'Tekrar' : idle ? 'Başlat' : 'Devam'}
-            </PillButton>
+            </SimpleButton>
           )}
         </div>
+        <div className="mt-4 h-8" />
       </div>
 
-      <GlassPanel title="Hazır süreler">
-        <div className={cn('max-h-[calc(100vh-220px)] space-y-1 overflow-y-auto', !idle && 'pointer-events-none opacity-80')}>
+      <div className="flex min-h-0 flex-col self-center">
+        <ListTitle>Hazır süreler</ListTitle>
+        <div className={cn('max-h-[calc(100vh-220px)] overflow-y-auto', !idle && 'pointer-events-none opacity-50')}>
           {PRESETS.map((p) => {
-            const on = tm.total === p.min * 60000
+            const on = PRESETS.find((q) => q.min * 60000 === tm.total) === p
             return (
               <div
                 key={p.name}
                 onClick={() => tm.set({ total: p.min * 60000, done: false })}
-                className={cn(PANEL_ROW, 'cursor-pointer', on ? PANEL_ROW_ON : 'hover:bg-white/[0.06]')}
+                className={cn(ROW, 'cursor-pointer py-2.5 transition-colors', on ? 'text-accent' : 'text-text hover:text-accent')}
               >
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[15px] font-medium">{p.name}</div>
+                  <div className={cn('truncate text-[15px]', on ? 'font-semibold' : 'font-medium')}>{p.name}</div>
                   <div className="truncate text-xs text-muted">{p.desc}</div>
                 </div>
-                <div className="tabular text-right text-xl font-light text-text/90">
+                <div className={cn('tabular text-right text-lg', on ? 'font-medium' : 'font-light')}>
                   {p.min}
                   <span className="ml-1 text-xs font-normal text-muted">dk</span>
                 </div>
@@ -491,7 +462,7 @@ function TimerTab(): React.JSX.Element {
             )
           })}
         </div>
-      </GlassPanel>
+      </div>
     </div>
   )
 }

@@ -19,8 +19,8 @@ function resolveCommand(): string {
 }
 
 /** .cmd dosyaları ve PATH araması Windows'ta kabuk gerektirir */
-const needsShell = (cmd: string): boolean => isWin && !cmd.toLowerCase().endsWith('.exe')
-const quote = (s: string): string => (/[\s"]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s)
+export const needsShell = (cmd: string): boolean => isWin && !cmd.toLowerCase().endsWith('.exe')
+export const quote = (s: string): string => (/[\s"]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s)
 
 export function status(): Promise<CliStatus> {
   const cmd = resolveCommand()
@@ -54,7 +54,7 @@ const CLI_SYSTEM =
 
 const running = new Map<string, ChildProcess>()
 
-function killTree(child: ChildProcess): void {
+export function killTree(child: ChildProcess): void {
   if (!child.pid) return
   if (isWin) spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true })
   else child.kill('SIGTERM')
@@ -73,7 +73,8 @@ export function chat(sender: WebContents, req: CliChatRequest): void {
     '--include-partial-messages',
     '--no-session-persistence',
     '--tools',
-    '',
+    // Ekli dosya varsa yalnızca okuma aracı açılır (çalışma klasörü userData)
+    req.attachments?.length ? 'Read' : '',
     '--model',
     MODEL_ALIAS[req.model] ?? 'sonnet',
     '--system-prompt',

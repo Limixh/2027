@@ -5,23 +5,27 @@ import {
   ClipboardCopy,
   Database,
   Eye,
+  FileText,
+  ImageIcon,
   KeyRound,
+  Paperclip,
   ListChecks,
   MessageSquarePlus,
   Sparkles,
   Square,
   Trash2,
   TriangleAlert,
-  User
+  User,
+  X
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import type { ChatMessage, ChatThread, CliStatus } from '../../../shared/types'
+import type { ChatAttachment, ChatMessage, ChatThread, CliStatus } from '../../../shared/types'
 import { Button, Card, cn, confirm, Input, Modal, toast } from '@/components/ui'
 import { ActionsCard } from '@/components/ai/ActionsCard'
 import { splitActions } from '@/lib/aiActions'
-import { AI_MODELS, ANALYSIS_PROMPT, PLAN_PROMPT, buildCliPrompt, buildContext, QUICK_PROMPTS, SYSTEM_PROMPT } from '@/lib/aiContext'
+import { AI_MODELS, ANALYSIS_PROMPT, EXAM_PROMPT, PLAN_PROMPT, buildCliPrompt, buildContext, QUICK_PROMPTS, SYSTEM_PROMPT } from '@/lib/aiContext'
 import { relativeDay, todayKey } from '@/lib/date'
 import { uid } from '@/lib/id'
 import { useNav } from '@/lib/nav'
@@ -29,14 +33,72 @@ import { useStore } from '@/lib/store'
 
 const modelLabel = (id: string): string => AI_MODELS.find((m) => m.id === id)?.label ?? id
 
+function AttachmentChip({ a, onRemove }: { a: ChatAttachment; onRemove?: () => void }): React.JSX.Element {
+  return (
+    <span className="inline-flex max-w-[220px] items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-1 text-xs text-text">
+      {a.mime.startsWith('image/') ? <ImageIcon size={13} className="shrink-0 text-muted" /> : <FileText size={13} className="shrink-0 text-muted" />}
+      <span className="truncate">{a.name}</span>
+      {onRemove && (
+        <button className="shrink-0 text-muted hover:text-danger" onClick={onRemove} aria-label="Kaldır">
+          <X size={12} />
+        </button>
+      )}
+    </span>
+  )
+}
+
+function CodexSetup({ checking, status, onCheck }: { checking: boolean; status: CliStatus | null; onCheck: () => void }): React.JSX.Element {
+  return (
+    <Card className="mx-auto max-w-xl p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <div className="grid h-11 w-11 place-items-center rounded-xl bg-surface-3 text-text">
+          <Bot size={20} />
+        </div>
+        <div>
+          <h3 className="font-semibold">ChatGPT aboneliğini bağla (Plus / Pro)</h3>
+          <p className="text-xs text-muted">OpenAI'nin resmi Codex CLI'ı ile; API anahtarı gerekmez, aboneliğinden harcar.</p>
+        </div>
+      </div>
+      {status?.installed && status.loggedIn === false && (
+        <p className="mb-4 rounded-lg bg-warning/10 p-3 text-xs text-warning">Codex kurulu ama giriş yapılmamış — 3. adımı uygula.</p>
+      )}
+      <ol className="space-y-4 text-sm text-muted">
+        <Step n={1}>
+          <b className="text-text">Node.js</b> kurulu değilse{' '}
+          <button className="text-accent hover:underline" onClick={() => window.api?.openExternal('https://nodejs.org/tr/download')}>
+            nodejs.org
+          </button>{' '}
+          adresinden "LTS" sürümünü indirip kur (ileri, ileri, bitir).
+        </Step>
+        <Step n={2}>
+          Başlat menüsüne <b className="text-text">PowerShell</b> yaz ve aç. Şunu yapıştır, Enter'a bas:
+          <CopyCode code="npm install -g @openai/codex" />
+        </Step>
+        <Step n={3}>
+          Ardından şunu yaz ve Enter'a bas; tarayıcıda <b className="text-text">"Sign in with ChatGPT"</b> ile hesabına giriş yap:
+          <CopyCode code="codex login" />
+        </Step>
+        <Step n={4}>
+          <Button variant="primary" disabled={checking} onClick={onCheck}>
+            {checking ? 'Kontrol ediliyor…' : 'Bağlantıyı kontrol et'}
+          </Button>
+        </Step>
+      </ol>
+    </Card>
+  )
+}
+
 /** API ardışık aynı rollü mesaj kabul etmez — birleştir */
-function toApiMessages(msgs: ChatMessage[]): { role: 'user' | 'assistant'; content: string }[] {
-  const out: { role: 'user' | 'assistant'; content: string }[] = []
+type ApiMsg = { role: 'user' | 'assistant'; content: string; attachments?: ChatAttachment[] }
+function toApiMessages(msgs: ChatMessage[]): ApiMsg[] {
+  const out: ApiMsg[] = []
   for (const m of msgs) {
     if (m.error || !m.content.trim()) continue
     const last = out[out.length - 1]
-    if (last && last.role === m.role) last.content += '\n\n' + m.content
-    else out.push({ role: m.role, content: m.content })
+    if (last && last.role === m.role) {
+      last.content += '\n\n' + m.content
+      if (m.attachments?.length) last.attachments = [...(last.attachments ?? []), ...m.attachments]
+    } else out.push({ role: m.role, content: m.content, ...(m.attachments?.length ? { attachments: m.attachments } : {}) })
   }
   while (out.length && out[0].role !== 'user') out.shift()
   return out
@@ -174,8 +236,15 @@ function MessageBubble({
   if (m.role === 'user') {
     return (
       <div className="flex justify-end gap-3">
-        <div className="max-w-[75%] whitespace-pre-wrap rounded-2xl rounded-tr-md bg-accent px-4 py-2.5 text-sm text-on-accent shadow-sm">
-          {m.content}
+        <div className="flex max-w-[75%] flex-col items-end gap-1.5">
+          {m.attachments?.length ? (
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {m.attachments.map((a) => (
+                <AttachmentChip key={a.rel} a={a} />
+              ))}
+            </div>
+          ) : null}
+          <div className="whitespace-pre-wrap rounded-2xl rounded-tr-md bg-accent px-4 py-2.5 text-sm text-on-accent shadow-sm">{m.content}</div>
         </div>
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-3 text-muted">
           <User size={15} />
@@ -257,9 +326,18 @@ export default function AiCoach(): React.JSX.Element {
   const [hasKey, setHasKey] = useState<boolean | null>(isDesktop ? null : false)
   const [cli, setCli] = useState<CliStatus | null>(null)
   const [checking, setChecking] = useState(false)
+  const [codexSt, setCodexSt] = useState<CliStatus | null>(null)
   const provider = isDesktop ? settings.aiProvider : 'api'
-  const notReady = provider === 'cli' ? cli?.installed === false : hasKey === false
-  const ready = provider === 'cli' ? !!cli?.installed : !!hasKey
+  const notReady =
+    provider === 'cli'
+      ? cli?.installed === false
+      : provider === 'codex'
+        ? codexSt?.installed === false || codexSt?.loggedIn === false
+        : hasKey === false
+  const ready = provider === 'cli' ? !!cli?.installed : provider === 'codex' ? !!codexSt?.installed && codexSt.loggedIn !== false : !!hasKey
+  const [files, setFiles] = useState<ChatAttachment[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
   const [activeId, setActiveId] = useState<string | null>(chats[0]?.id ?? null)
   const [input, setInput] = useState('')
   const [includeContext, setIncludeContext] = useState(true)
@@ -272,6 +350,8 @@ export default function AiCoach(): React.JSX.Element {
     streamRef.current = next
     setStreaming(next)
   }, [])
+  const filesRef = useRef(files)
+  filesRef.current = files
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -290,9 +370,45 @@ export default function AiCoach(): React.JSX.Element {
     setCli(st)
     return st
   }, [])
+  const checkCodex = useCallback(async () => {
+    if (!window.api) return
+    setChecking(true)
+    const st = await window.api.ai.codexStatus()
+    setChecking(false)
+    setCodexSt(st)
+    return st
+  }, [])
   useEffect(() => {
     if (provider === 'cli') void checkCli()
-  }, [provider, checkCli])
+    if (provider === 'codex') void checkCodex()
+  }, [provider, checkCli, checkCodex])
+
+  /** Dosyayı uygulama klasörüne kaydedip bekleyen eklere ekler */
+  const addFiles = useCallback(async (list: File[]) => {
+    if (!window.api || !list.length) return
+    setUploading(true)
+    try {
+      for (const f of list) {
+        if (f.size > 25 * 1024 * 1024) {
+          toast(`${f.name} çok büyük (en fazla 25 MB)`, 'error')
+          continue
+        }
+        const b64 = await new Promise<string>((resolve, reject) => {
+          const r = new FileReader()
+          r.onload = () => resolve(String(r.result).split(',')[1] ?? '')
+          r.onerror = () => reject(r.error)
+          r.readAsDataURL(f)
+        })
+        const name = f.name || `yapistirilan-${Date.now()}.png`
+        const att = await window.api.ai.saveAttachment(name, b64)
+        setFiles((prev) => [...prev, att])
+      }
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Dosya eklenemedi', 'error')
+    } finally {
+      setUploading(false)
+    }
+  }, [])
 
   // Akış olaylarını dinle
   useEffect(() => {
@@ -331,10 +447,18 @@ export default function AiCoach(): React.JSX.Element {
 
   const send = useCallback(
     (text: string, opts?: { newThread?: boolean }) => {
-      const content = text.trim()
+      const pending = filesRef.current
+      const content = text.trim() || (pending.length ? EXAM_PROMPT : '')
       if (!content || streamRef.current || !window.api) return
       const nowIso = new Date().toISOString()
-      const userMsg: ChatMessage = { id: uid(), role: 'user', content, createdAt: nowIso }
+      const userMsg: ChatMessage = {
+        id: uid(),
+        role: 'user',
+        content,
+        createdAt: nowIso,
+        ...(pending.length ? { attachments: pending } : {})
+      }
+      setFiles([])
       const current = opts?.newThread ? undefined : useStore.getState().data.chats.find((c) => c.id === activeId)
       const thread: ChatThread = current
         ? { ...current, messages: [...current.messages, userMsg], updatedAt: nowIso }
@@ -351,11 +475,22 @@ export default function AiCoach(): React.JSX.Element {
       const requestId = uid()
       setStream({ requestId, threadId: thread.id, text: '' })
       const st = useStore.getState().data
+      const msgs = toApiMessages(thread.messages)
       if (st.settings.aiProvider === 'cli') {
         void window.api.ai.cliChat({
           requestId,
           model: st.settings.aiModel,
-          prompt: buildCliPrompt(toApiMessages(thread.messages), includeContext ? buildContext(st) : undefined)
+          prompt: buildCliPrompt(msgs, includeContext ? buildContext(st) : undefined, 'claude'),
+          attachments: msgs.flatMap((m) => m.attachments ?? [])
+        })
+        return
+      }
+      if (st.settings.aiProvider === 'codex') {
+        void window.api.ai.codexChat({
+          requestId,
+          model: st.settings.codexModel ?? '',
+          prompt: buildCliPrompt(msgs, includeContext ? buildContext(st) : undefined, 'codex'),
+          attachments: pending
         })
         return
       }
@@ -365,7 +500,7 @@ export default function AiCoach(): React.JSX.Element {
         effort: st.settings.aiEffort,
         system: SYSTEM_PROMPT,
         context: includeContext ? buildContext(st) : undefined,
-        messages: toApiMessages(thread.messages)
+        messages: msgs
       })
     },
     [activeId, includeContext, upsertChat, setStream]
@@ -461,7 +596,9 @@ export default function AiCoach(): React.JSX.Element {
             <div className="min-w-0">
               <div className="text-sm font-semibold">AI Koç</div>
               <div className="truncate text-[11px] text-muted">
-                {modelLabel(settings.aiModel)} · {provider === 'cli' ? 'Claude aboneliği' : 'API anahtarı'}
+                {provider === 'codex'
+                  ? `ChatGPT${settings.codexModel ? ' · ' + settings.codexModel : ''} · ChatGPT aboneliği`
+                  : `${modelLabel(settings.aiModel)} · ${provider === 'cli' ? 'Claude aboneliği' : 'Claude API'}`}
               </div>
             </div>
           </div>
@@ -473,13 +610,15 @@ export default function AiCoach(): React.JSX.Element {
               <select
                 className="input h-8 w-auto py-0 text-xs"
                 value={settings.aiProvider}
-                onChange={(e) => updateSettings({ aiProvider: e.target.value as 'cli' | 'api' })}
+                onChange={(e) => updateSettings({ aiProvider: e.target.value as 'cli' | 'api' | 'codex' })}
                 title="Bağlantı türü"
               >
-                <option value="cli">Abonelik</option>
-                <option value="api">API anahtarı</option>
+                <option value="cli">Claude (abonelik)</option>
+                <option value="codex">ChatGPT (abonelik)</option>
+                <option value="api">Claude (API anahtarı)</option>
               </select>
             )}
+            {provider !== 'codex' && (
             <select
               className="input h-8 w-auto py-0 text-xs"
               value={settings.aiModel}
@@ -492,6 +631,7 @@ export default function AiCoach(): React.JSX.Element {
                 </option>
               ))}
             </select>
+            )}
             <button
               className={cn(
                 'flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition',
@@ -513,6 +653,22 @@ export default function AiCoach(): React.JSX.Element {
 
         {notReady ? (
           <div className="flex-1 overflow-y-auto p-6">
+            {provider === 'codex' && (
+              <>
+                <CodexSetup
+                  checking={checking}
+                  status={codexSt}
+                  onCheck={async () => {
+                    const st = await checkCodex()
+                    toast(
+                      !st?.installed ? 'Codex bulunamadı — adımları kontrol et' : st.loggedIn === false ? 'Codex kurulu, giriş yapılmamış' : `ChatGPT bağlı (Codex ${st.version ?? ''})`,
+                      st?.installed && st.loggedIn !== false ? 'success' : 'error'
+                    )
+                  }}
+                />
+                <div className="mx-auto my-5 max-w-xl text-center text-xs text-subtle">— kurmadan da kullanabilirsin —</div>
+              </>
+            )}
             {provider === 'cli' && (
               <>
                 <CliSetup
@@ -610,9 +766,52 @@ export default function AiCoach(): React.JSX.Element {
               )}
             </div>
 
-            <div className="border-t border-border p-4">
+            <div
+              className="border-t border-border p-4"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault()
+                void addFiles([...e.dataTransfer.files])
+              }}
+            >
+              {(files.length > 0 || uploading) && (
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  {files.map((f, i) => (
+                    <AttachmentChip key={f.rel} a={f} onRemove={() => setFiles((p) => p.filter((_, j) => j !== i))} />
+                  ))}
+                  {uploading && <span className="text-xs text-muted">Yükleniyor…</span>}
+                </div>
+              )}
               <div className="flex items-end gap-2 rounded-2xl border border-border bg-surface-2 p-2 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  multiple
+                  accept="image/png,image/jpeg,image/webp,application/pdf,.txt,.csv,.md"
+                  className="hidden"
+                  onChange={(e) => {
+                    void addFiles([...(e.target.files ?? [])])
+                    e.target.value = ''
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => fileRef.current?.click()}
+                  title="Dosya ekle (deneme sonuç belgesi: resim, PDF, metin)"
+                  aria-label="Dosya ekle"
+                >
+                  <Paperclip size={16} />
+                </Button>
                 <textarea
+                  onPaste={(e) => {
+                    const imgs = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'))
+                    if (imgs.length) {
+                      e.preventDefault()
+                      void addFiles(imgs)
+                    }
+                  }}
                   ref={inputRef}
                   rows={1}
                   value={input}
@@ -623,7 +822,7 @@ export default function AiCoach(): React.JSX.Element {
                       send(input)
                     }
                   }}
-                  placeholder="Koçuna bir şey sor… (Enter gönder, Shift+Enter yeni satır)"
+                  placeholder={files.length ? 'Ek hakkında bir not yaz ya da direkt gönder (deneme sonucu olarak okunur)…' : 'Koçuna bir şey sor… (dosya ekle / Ctrl+V ile resim yapıştır)'}
                   className="max-h-40 min-h-[36px] flex-1 resize-none bg-transparent px-2 py-2 text-sm outline-none placeholder:text-subtle"
                   style={{ height: Math.min(160, 36 + (input.split('\n').length - 1) * 20) }}
                 />
@@ -633,14 +832,18 @@ export default function AiCoach(): React.JSX.Element {
                     size="icon"
                     className="h-9 w-9"
                     onClick={() =>
-                      provider === 'cli' ? window.api?.ai.cliAbort(streaming.requestId) : window.api?.ai.abort(streaming.requestId)
+                      provider === 'cli'
+                        ? window.api?.ai.cliAbort(streaming.requestId)
+                        : provider === 'codex'
+                          ? window.api?.ai.codexAbort(streaming.requestId)
+                          : window.api?.ai.abort(streaming.requestId)
                     }
                     aria-label="Durdur"
                   >
                     <Square size={14} />
                   </Button>
                 ) : (
-                  <Button variant="primary" size="icon" className="h-9 w-9" disabled={!input.trim()} onClick={() => send(input)} aria-label="Gönder">
+                  <Button variant="primary" size="icon" className="h-9 w-9" disabled={(!input.trim() && !files.length) || uploading} onClick={() => send(input)} aria-label="Gönder">
                     <ArrowUp size={16} />
                   </Button>
                 )}

@@ -84,16 +84,24 @@ function AiSettings(): React.JSX.Element {
           value={settings.aiProvider}
           onChange={(v) => update({ aiProvider: v })}
           options={[
-            { value: 'cli', label: 'Claude aboneliği (önerilen)' },
-            { value: 'api', label: 'API anahtarı' }
+            { value: 'cli', label: 'Claude aboneliği' },
+            { value: 'codex', label: 'ChatGPT aboneliği' },
+            { value: 'api', label: 'Claude API anahtarı' }
           ]}
         />
         <span className="mt-1.5 block text-[11px] leading-relaxed text-subtle">
           {settings.aiProvider === 'cli'
-            ? "Bilgisayarına kurulu Claude Code üzerinden Pro/Max aboneliğini kullanır, ek ücret yok. Kurulum adımları AI Koç sayfasında."
-            : 'console.anthropic.com hesabından kullandıkça ödenir; abonelikten ayrıdır.'}
+            ? 'Bilgisayarına kurulu Claude Code üzerinden Pro/Max aboneliğini kullanır, ek ücret yok. Kurulum adımları AI Koç sayfasında.'
+            : settings.aiProvider === 'codex'
+              ? "Bilgisayarına kurulu OpenAI Codex CLI üzerinden ChatGPT Plus/Pro aboneliğini kullanır. Kurulum adımları AI Koç sayfasında."
+              : 'console.anthropic.com hesabından kullandıkça ödenir; abonelikten ayrıdır.'}
         </span>
       </Field>
+      {settings.aiProvider === 'codex' && (
+        <Field label="ChatGPT modeli (isteğe bağlı)" hint="Boş bırakırsan ChatGPT hesabının varsayılan modeli kullanılır." className="mb-4">
+          <Input value={settings.codexModel ?? ''} placeholder="varsayılan" onChange={(e) => update({ codexModel: e.target.value.trim() })} />
+        </Field>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Model">
           <Select value={settings.aiModel} onChange={(e) => update({ aiModel: e.target.value })}>
