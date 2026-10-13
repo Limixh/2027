@@ -111,7 +111,7 @@ export function PriorityList({
                       size="sm"
                       variant="outline"
                       icon={<ArrowRight size={13} />}
-                      onClick={() => go('topics', { subjectId: w.subjectId, topicId: w.topicId })}
+                      onClick={() => go('topics', { subject: w.subjectId, exam: w.subjectId.startsWith('ayt') ? 'AYT' : 'TYT' })}
                     >
                       Konuya git
                     </Button>
@@ -122,7 +122,7 @@ export function PriorityList({
                       title="Hata defterine ekle"
                       aria-label="Hata defterine ekle"
                       icon={<BookmarkPlus size={13} />}
-                      onClick={() => go('mistakes', { new: true, subjectId: w.subjectId, topicId: w.topicId })}
+                      onClick={() => go('mistakes', { new: true, subject: w.subjectId, topic: w.topicId })}
                     >
                       <span className="hidden 2xl:inline">Hata defterine ekle</span>
                     </Button>
