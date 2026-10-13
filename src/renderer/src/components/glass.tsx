@@ -68,3 +68,119 @@ export function Aurora(): React.JSX.Element {
     </div>
   )
 }
+
+/* ---------- Kronometre / Zamanlayıcı ortak parçaları ---------- */
+
+/** Yuvarlak cam kadran: 60 çentik + isteğe bağlı SVG katmanı + ortada içerik.
+ *  Boyut `--d` CSS değişkeniyle gelir; içerik yazı boyutunu `calc(var(--d) * k)` ile ölçekleyebilir. */
+export function Dial({ svg, children }: { svg?: React.ReactNode; children?: React.ReactNode }): React.JSX.Element {
+  return (
+    <div
+      className="glass relative grid shrink-0 place-items-center rounded-full"
+      style={{ ['--d' as string]: 'min(56vh, 460px)', width: 'var(--d)', height: 'var(--d)' }}
+    >
+      <svg viewBox="-50 -50 100 100" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
+        <circle r={37} fill="rgb(var(--bg) / 0.10)" stroke="rgb(var(--text) / 0.07)" strokeWidth={0.3} />
+        {Array.from({ length: 60 }, (_, i) => {
+          const major = i % 5 === 0
+          return (
+            <line
+              key={i}
+              x1={0}
+              x2={0}
+              y1={-48.6}
+              y2={major ? -44.2 : -46.2}
+              stroke={major ? 'rgb(var(--text) / 0.7)' : 'rgb(var(--text) / 0.28)'}
+              strokeWidth={major ? 0.7 : 0.35}
+              strokeLinecap="round"
+              transform={`rotate(${i * 6})`}
+            />
+          )
+        })}
+        {svg}
+      </svg>
+      <div className="relative z-10 flex flex-col items-center text-center">{children}</div>
+    </div>
+  )
+}
+
+/** Kadranın altındaki hap biçimli cam düğme */
+export function PillButton({
+  children,
+  onClick,
+  tone = 'neutral',
+  disabled,
+  icon
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  tone?: 'neutral' | 'go' | 'stop'
+  disabled?: boolean
+  icon?: React.ReactNode
+}): React.JSX.Element {
+  const tint = { neutral: 'transparent', go: 'rgb(var(--success) / 0.42)', stop: 'rgb(var(--danger) / 0.42)' }
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="glass glass-press flex h-[52px] min-w-[132px] items-center justify-center gap-2 rounded-full px-7 text-[15px] font-semibold text-text disabled:pointer-events-none disabled:opacity-35"
+      style={{ backgroundColor: tint[tone] }}
+    >
+      {icon}
+      {children}
+    </button>
+  )
+}
+
+/** Küçük yuvarlak cam düğme (−5 / +5 gibi) */
+export function CircleButton({
+  children,
+  onClick,
+  disabled,
+  label
+}: {
+  children: React.ReactNode
+  onClick: () => void
+  disabled?: boolean
+  label: string
+}): React.JSX.Element {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="glass glass-press grid h-12 w-12 place-items-center rounded-full text-[15px] font-semibold text-text disabled:pointer-events-none disabled:opacity-35"
+    >
+      {children}
+    </button>
+  )
+}
+
+/** Sağdaki cam liste paneli (Geri Sayım listesiyle aynı dil) */
+export function GlassPanel({
+  title,
+  action,
+  footer,
+  children
+}: {
+  title: string
+  action?: React.ReactNode
+  footer?: React.ReactNode
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="glass flex min-h-0 flex-col self-center rounded-[28px] p-3">
+      <div className="mb-2 flex items-center justify-between px-3 pt-1">
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{title}</span>
+        {action}
+      </div>
+      {children}
+      {footer}
+    </div>
+  )
+}
+
+/** Panel satırı: seçili olunca Geri Sayım listesindeki gibi parlar */
+export const PANEL_ROW = 'flex items-center gap-3 rounded-2xl px-4 py-2.5 transition'
+export const PANEL_ROW_ON = 'bg-white/[0.12] shadow-[inset_0_1px_0_rgb(255_255_255/0.25)]'
