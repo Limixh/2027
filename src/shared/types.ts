@@ -150,6 +150,50 @@ export interface Countdown {
   color?: string
 }
 
+export type PlanTaskKind = 'konu' | 'soru' | 'tekrar' | 'deneme' | 'diger'
+
+/** Günlük plandaki tek görev (AI veya kullanıcı tarafından oluşturulur) */
+export interface PlanTask {
+  id: string
+  /** ör. 'Türev: tanım ve kurallar' */
+  title: string
+  subjectId?: string
+  topicId?: string
+  kind: PlanTaskKind
+  /** Konunun hangi kısmı (ör. 'ilk 3 alt başlık'); boşsa konunun tamamı */
+  scope?: string
+  /** Bitince konu tamamen bitmiş sayılsın mı (konu/soru görevleri) */
+  completesTopic?: boolean
+  targetMinutes?: number
+  targetQuestions?: number
+  /** Önerilen başlangıç saati 'HH:mm' */
+  time?: string
+  note?: string
+  done: boolean
+  doneAt?: string
+  /** Bitirilince oluşturulan çalışma kaydı */
+  sessionId?: string
+  source: 'ai' | 'manual'
+}
+
+export interface DailyPlan {
+  /** YYYY-MM-DD */
+  date: string
+  tasks: PlanTask[]
+  /** AI'nin planla ilgili kısa notu */
+  summary?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TaskResult {
+  minutes: number
+  solved?: number
+  correct?: number
+  wrong?: number
+  note?: string
+}
+
 export interface AppData {
   version: 1
   settings: Settings
@@ -160,6 +204,8 @@ export interface AppData {
   goals: Goal[]
   chats: ChatThread[]
   countdowns: Countdown[]
+  /** tarih -> günlük plan */
+  plans: Record<string, DailyPlan>
 }
 
 export interface ChatMessage {

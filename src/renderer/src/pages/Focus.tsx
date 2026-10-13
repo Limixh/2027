@@ -2,121 +2,14 @@
 // Kenar çubuğu olmadan tüm pencereyi kaplar; tam ekran (F11) desteklenir.
 import { ArrowLeft, Bell, Flag, Maximize2, Minimize2, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { create } from 'zustand'
 import { cn, toast } from '@/components/ui'
+import { Aurora, BG_KEY, BigNumber, RoundButton, type Backdrop } from '@/components/glass'
+import { beep, fmtSw, fmtTimer, swElapsed, useCountdownTimer, useStopwatch, useTicker } from '@/lib/clocks'
 import { formatDate, pad, todayKey } from '@/lib/date'
 import { useNav } from '@/lib/nav'
 import { useStore } from '@/lib/store'
 
 type Tab = 'countdown' | 'stopwatch' | 'timer'
-
-/* ---------- Kalıcı (sayfadan çıkınca da süren) durumlar ---------- */
-
-interface StopwatchState {
-  running: boolean
-  startedAt?: number
-  acc: number
-  laps: number[]
-  set(p: Partial<StopwatchState>): void
-}
-const useStopwatch = create<StopwatchState>((set) => ({ running: false, acc: 0, laps: [], set: (p) => set(p) }))
-
-interface TimerState {
-  /** Toplam süre (ms) */
-  total: number
-  /** Çalışırken bitiş anı */
-  endsAt?: number
-  /** Duraklatıldığında kalan (ms) */
-  remaining?: number
-  done: boolean
-  set(p: Partial<TimerState>): void
-}
-const useCountdownTimer = create<TimerState>((set) => ({ total: 25 * 60000, done: false, set: (p) => set(p) }))
-
-const swElapsed = (s: Pick<StopwatchState, 'running' | 'startedAt' | 'acc'>): number =>
-  s.acc + (s.running && s.startedAt ? Date.now() - s.startedAt : 0)
-
-/** Ekranı ~30 fps yeniler (yalnızca gerektiğinde) */
-function useTicker(active: boolean, ms = 33): void {
-  const [, setN] = useState(0)
-  useEffect(() => {
-    if (!active) return
-    const id = setInterval(() => setN((n) => n + 1), ms)
-    return () => clearInterval(id)
-  }, [active, ms])
-}
-
-function beep(): void {
-  try {
-    const ctx = new AudioContext()
-    ;[0, 0.35, 0.7].forEach((t) => {
-      const o = ctx.createOscillator()
-      const g = ctx.createGain()
-      o.frequency.value = 880
-      g.gain.setValueAtTime(0.0001, ctx.currentTime + t)
-      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + t + 0.02)
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.3)
-      o.connect(g).connect(ctx.destination)
-      o.start(ctx.currentTime + t)
-      o.stop(ctx.currentTime + t + 0.32)
-    })
-  } catch {
-    /* ses yok */
-  }
-}
-
-/* ---------- Ortak parçalar ---------- */
-
-/** Apple tarzı yuvarlak düğme */
-function RoundButton({
-  children,
-  onClick,
-  tone = 'neutral',
-  disabled
-}: {
-  children: React.ReactNode
-  onClick: () => void
-  tone?: 'neutral' | 'go' | 'stop'
-  disabled?: boolean
-}): React.JSX.Element {
-  const tints = {
-    neutral: 'text-text',
-    go: 'text-text',
-    stop: 'text-text'
-  }
-  const glow = {
-    neutral: 'transparent',
-    go: 'rgb(var(--success) / 0.45)',
-    stop: 'rgb(var(--danger) / 0.45)'
-  }
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        'glass glass-press grid h-[92px] w-[92px] place-items-center rounded-full text-[15px] font-semibold disabled:pointer-events-none disabled:opacity-35',
-        tints[tone]
-      )}
-      style={{ backgroundColor: glow[tone] }}
-    >
-      {children}
-    </button>
-  )
-}
-
-/** Büyük, ince rakamlar */
-function BigNumber({ children, size = 'xl' }: { children: React.ReactNode; size?: 'xl' | 'lg' }): React.JSX.Element {
-  return (
-    <div
-      className={cn(
-        'tabular font-extralight leading-none tracking-tight text-text',
-        size === 'xl' ? 'text-[clamp(64px,14vw,200px)]' : 'text-[clamp(48px,9vw,128px)]'
-      )}
-    >
-      {children}
-    </div>
-  )
-}
 
 /* ---------- Geri sayım ---------- */
 
@@ -257,15 +150,6 @@ function CountdownTab(): React.JSX.Element {
 
 /* ---------- Kronometre ---------- */
 
-function fmtSw(ms: number): string {
-  const cs = Math.floor((ms % 1000) / 10)
-  const t = Math.floor(ms / 1000)
-  const h = Math.floor(t / 3600)
-  const m = Math.floor((t % 3600) / 60)
-  const s = t % 60
-  return `${h ? h + ':' + pad(m) : pad(m)}:${pad(s)},${pad(cs)}`
-}
-
 function StopwatchTab(): React.JSX.Element {
   const sw = useStopwatch()
   const addSession = useStore((s) => s.addSession)
@@ -353,14 +237,6 @@ function StopwatchTab(): React.JSX.Element {
 /* ---------- Zamanlayıcı ---------- */
 
 const PRESETS = [5, 10, 15, 25, 40, 50, 75, 90]
-
-function fmtTimer(ms: number): string {
-  const t = Math.ceil(ms / 1000)
-  const h = Math.floor(t / 3600)
-  const m = Math.floor((t % 3600) / 60)
-  const s = t % 60
-  return h ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`
-}
 
 function TimerTab(): React.JSX.Element {
   const tm = useCountdownTimer()
@@ -503,21 +379,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'stopwatch', label: 'Kronometre' },
   { id: 'timer', label: 'Zamanlayıcı' }
 ]
-
-type Backdrop = 'aurora' | 'plain'
-const BG_KEY = 'yks-focus-bg'
-
-/** Cam efektinin görünmesi için arkada yavaşça dolaşan yumuşak renk kümeleri */
-function Aurora(): React.JSX.Element {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="lg-blob lg-drift-1" style={{ width: '46vw', height: '46vw', left: '-8vw', top: '-12vw', background: '#7c9cc0' }} />
-      <div className="lg-blob lg-drift-2" style={{ width: '40vw', height: '40vw', right: '-10vw', top: '10vh', background: '#b39bc4' }} />
-      <div className="lg-blob lg-drift-3" style={{ width: '38vw', height: '38vw', left: '24vw', bottom: '-18vw', background: '#8fb59a' }} />
-      <div className="lg-blob lg-drift-2" style={{ width: '24vw', height: '24vw', right: '18vw', bottom: '4vh', background: '#d4b483', animationDelay: '-12s' }} />
-    </div>
-  )
-}
 
 export default function Focus(): React.JSX.Element {
   const go = useNav((s) => s.go)

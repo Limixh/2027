@@ -2,6 +2,10 @@ import { create } from 'zustand'
 import type {
   AppData,
   Countdown,
+  DailyPlan,
+  PlanTask,
+  TaskResult,
+  TopicStatus,
   ChatThread,
   ExamResult,
   Goal,
@@ -40,7 +44,8 @@ export const emptyData = (): AppData => ({
   mistakeNotes: [],
   goals: [],
   chats: [],
-  countdowns: []
+  countdowns: [],
+  plans: {}
 })
 
 /** Eski/eksik veriyi güncel şemaya tamamla */
@@ -56,7 +61,8 @@ export function normalize(raw: Partial<AppData> | null | undefined): AppData {
     mistakeNotes: Array.isArray(raw.mistakeNotes) ? raw.mistakeNotes : [],
     goals: Array.isArray(raw.goals) ? raw.goals : [],
     chats: Array.isArray(raw.chats) ? raw.chats : [],
-    countdowns: Array.isArray(raw.countdowns) ? raw.countdowns : []
+    countdowns: Array.isArray(raw.countdowns) ? raw.countdowns : [],
+    plans: raw.plans && typeof raw.plans === 'object' ? raw.plans : {}
   }
 }
 
@@ -120,6 +126,17 @@ interface Store {
   addGoal(g: NewGoal): Goal
   updateGoal(id: string, patch: Partial<Goal>): void
   deleteGoal(id: string): void
+
+  /** Günün planını yazar. mode 'append' mevcut görevlerin sonuna ekler */
+  setPlan(date: string, tasks: Omit<PlanTask, 'id' | 'done'>[], opts?: { summary?: string; mode?: 'replace' | 'append' }): void
+  addPlanTask(date: string, task: Omit<PlanTask, 'id' | 'done'>): void
+  updatePlanTask(date: string, id: string, patch: Partial<PlanTask>): void
+  deletePlanTask(date: string, id: string): void
+  movePlanTask(date: string, id: string, dir: -1 | 1): void
+  /** Görevi bitirir: çalışma kaydı oluşturur ve konu ilerlemesini günceller */
+  completePlanTask(date: string, id: string, result: TaskResult): void
+  /** Bitirmeyi geri alır (oluşan çalışma kaydı silinir) */
+  reopenPlanTask(date: string, id: string): void
 
   addCountdown(c: Omit<Countdown, 'id'>): void
   deleteCountdown(id: string): void
@@ -237,6 +254,88 @@ export const useStore = create<Store>((set, get) => {
     },
     deleteGoal(id) {
       mutate((d) => ({ ...d, goals: d.goals.filter((g) => g.id !== id) }))
+    },
+
+    setPlan(date, tasks, opts = {}) {
+      mutate((d) => {
+        const prev = d.plans[date]
+        const fresh = tasks.map((t) => ({ ...t, id: uid(), done: false }) as PlanTask)
+        const plan: DailyPlan = {
+          date,
+          tasks: opts.mode === 'append' && prev ? [...prev.tasks, ...fresh] : fresh,
+          summary: opts.summary ?? prev?.summary,
+          createdAt: prev?.createdAt ?? now(),
+          updatedAt: now()
+        }
+        return { ...d, plans: { ...d.plans, [date]: plan } }
+      })
+    },
+    addPlanTask(date, task) {
+      get().setPlan(date, [task], { mode: 'append' })
+    },
+    updatePlanTask(date, id, patch) {
+      mutate((d) => {
+        const plan = d.plans[date]
+        if (!plan) return d
+        return {
+          ...d,
+          plans: { ...d.plans, [date]: { ...plan, tasks: plan.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)), updatedAt: now() } }
+        }
+      })
+    },
+    deletePlanTask(date, id) {
+      mutate((d) => {
+        const plan = d.plans[date]
+        if (!plan) return d
+        return { ...d, plans: { ...d.plans, [date]: { ...plan, tasks: plan.tasks.filter((t) => t.id !== id), updatedAt: now() } } }
+      })
+    },
+    movePlanTask(date, id, dir) {
+      mutate((d) => {
+        const plan = d.plans[date]
+        if (!plan) return d
+        const i = plan.tasks.findIndex((t) => t.id === id)
+        const j = i + dir
+        if (i < 0 || j < 0 || j >= plan.tasks.length) return d
+        const tasks = plan.tasks.slice()
+        ;[tasks[i], tasks[j]] = [tasks[j], tasks[i]]
+        return { ...d, plans: { ...d.plans, [date]: { ...plan, tasks, updatedAt: now() } } }
+      })
+    },
+    completePlanTask(date, id, result) {
+      const task = get().data.plans[date]?.tasks.find((t) => t.id === id)
+      if (!task || task.done) return
+      let sessionId: string | undefined
+      if (result.minutes > 0 || result.solved) {
+        sessionId = get().addSession({
+          date: todayKey() < date ? todayKey() : date,
+          minutes: Math.max(0, Math.round(result.minutes)),
+          subjectId: task.subjectId,
+          topicId: task.topicId,
+          solved: result.solved || undefined,
+          correct: result.correct || undefined,
+          wrong: result.wrong || undefined,
+          kind: task.kind,
+          note: [task.title, task.scope, result.note].filter(Boolean).join(' · ')
+        }).id
+      }
+      // Konu ilerlemesini görev türüne göre otomatik güncelle
+      if (task.topicId) {
+        const cur = get().data.topicProgress[task.topicId]?.status ?? 0
+        if (task.kind === 'tekrar') get().markReviewed(task.topicId)
+        else {
+          const target: TopicStatus =
+            task.kind === 'konu' ? (task.completesTopic === false ? 1 : 2) : task.kind === 'soru' ? (task.completesTopic ? 3 : 1) : 1
+          if (target > cur) get().setTopicProgress(task.topicId, { status: target })
+        }
+      }
+      get().updatePlanTask(date, id, { done: true, doneAt: now(), sessionId })
+    },
+    reopenPlanTask(date, id) {
+      const task = get().data.plans[date]?.tasks.find((t) => t.id === id)
+      if (!task) return
+      if (task.sessionId) get().deleteSession(task.sessionId)
+      get().updatePlanTask(date, id, { done: false, doneAt: undefined, sessionId: undefined })
     },
 
     addCountdown(c) {

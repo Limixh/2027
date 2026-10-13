@@ -6,6 +6,7 @@ import {
   ClipboardList,
   AlarmClock,
   Flame,
+  ListChecks,
   LayoutDashboard,
   Moon,
   NotebookPen,
@@ -25,6 +26,7 @@ import { cn } from './ui'
 
 const NAV: { id: PageId; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: 'Genel Bakış', icon: LayoutDashboard },
+  { id: 'room', label: 'Çalışma Odası', icon: ListChecks },
   { id: 'study', label: 'Çalışma Takibi', icon: CalendarClock },
   { id: 'exams', label: 'Denemeler', icon: ClipboardList },
   { id: 'topics', label: 'Konu Takibi', icon: BookOpenCheck },

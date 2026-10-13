@@ -13,6 +13,7 @@ import Mistakes from './pages/Mistakes'
 import AiCoach from './pages/AiCoach'
 import SettingsPage from './pages/Settings'
 import Focus from './pages/Focus'
+import Room from './pages/Room'
 
 const PAGES = {
   dashboard: Dashboard,
@@ -23,7 +24,8 @@ const PAGES = {
   mistakes: Mistakes,
   ai: AiCoach,
   settings: SettingsPage,
-  focus: Focus
+  focus: Focus,
+  room: Room
 }
 
 function useTheme(): void {
@@ -67,10 +69,10 @@ export default function App(): React.JSX.Element {
 
   const Page = PAGES[page]
   // Sayaç sayfası tüm pencereyi kaplar (kenar çubuğu yok)
-  if (page === 'focus') {
+  if (page === 'focus' || page === 'room') {
     return (
       <div className="h-full overflow-hidden">
-        <Focus />
+        <Page />
         <ConfirmHost />
         <ToastHost />
       </div>
