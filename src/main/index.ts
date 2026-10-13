@@ -126,6 +126,9 @@ function registerIpc(): void {
   ipcMain.handle('ai:abort', (_e, id: string) => ai.abort(id))
 }
 
+// Tarih seçiciler ve sayı biçimleri Türkçe olsun
+app.commandLine.appendSwitch('lang', 'tr')
+
 app.whenReady().then(() => {
   app.setAppUserModelId('com.yks2027.takip')
   registerIpc()

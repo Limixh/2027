@@ -90,7 +90,7 @@ function KeySetup({ onSaved }: { onSaved: () => void }): React.JSX.Element {
         </Button>
       </div>
       <p className="mt-4 text-xs text-subtle">
-        API anahtarın yoksa: sağ üstteki <b>Prompt'u kopyala</b> düğmesiyle verilerini içeren hazır bir istemi panoya kopyalayıp
+        API anahtarın yoksa: sağ üstteki <b>kopyala</b> (📋) düğmesiyle verilerini içeren hazır bir istemi panoya kopyalayıp
         claude.ai'ye yapıştırabilirsin.
       </p>
     </Card>
@@ -288,7 +288,7 @@ export default function AiCoach(): React.JSX.Element {
   return (
     <div className="flex h-[calc(100vh-40px-2.5rem)] min-h-[560px] gap-5 pt-1">
       {/* Sohbet geçmişi */}
-      <Card className="flex w-64 shrink-0 flex-col overflow-hidden">
+      <Card className="hidden w-60 shrink-0 flex-col overflow-hidden xl:flex">
         <div className="p-3">
           <Button variant="primary" className="w-full justify-center" icon={<MessageSquarePlus size={16} />} onClick={newChat}>
             Yeni sohbet
@@ -333,16 +333,19 @@ export default function AiCoach(): React.JSX.Element {
       {/* Sohbet alanı */}
       <Card className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
-          <div className="flex items-center gap-2.5">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-2 text-white">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-2 text-white">
               <Bot size={17} />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="text-sm font-semibold">AI Koç</div>
-              <div className="text-[11px] text-muted">{modelLabel(settings.aiModel)} · verilerinle kişisel analiz</div>
+              <div className="truncate text-[11px] text-muted">{modelLabel(settings.aiModel)} · verilerinle kişisel analiz</div>
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button size="icon" variant="ghost" className="xl:hidden" onClick={newChat} title="Yeni sohbet" aria-label="Yeni sohbet">
+              <MessageSquarePlus size={15} />
+            </Button>
             <select
               className="input h-8 w-auto py-0 text-xs"
               value={settings.aiModel}
@@ -363,13 +366,13 @@ export default function AiCoach(): React.JSX.Element {
               onClick={() => setIncludeContext((v) => !v)}
               title="Verilerini AI'ye bağlam olarak gönder"
             >
-              <Database size={13} /> Verilerim {includeContext ? 'açık' : 'kapalı'}
+              <Database size={13} /> <span className="hidden 2xl:inline">Verilerim</span> {includeContext ? 'açık' : 'kapalı'}
             </button>
-            <Button size="sm" variant="ghost" icon={<Eye size={14} />} onClick={() => setShowContext(true)}>
-              Bağlam
+            <Button size="sm" variant="ghost" icon={<Eye size={14} />} onClick={() => setShowContext(true)} title="Gönderilen verileri gör">
+              <span className="hidden 2xl:inline">Bağlam</span>
             </Button>
-            <Button size="sm" variant="ghost" icon={<ClipboardCopy size={14} />} onClick={copyPrompt} title="claude.ai'de kullanmak için">
-              Prompt'u kopyala
+            <Button size="sm" variant="ghost" icon={<ClipboardCopy size={14} />} onClick={copyPrompt} title="Prompt'u kopyala (claude.ai'de kullanmak için)">
+              <span className="hidden 2xl:inline">Prompt'u kopyala</span>
             </Button>
           </div>
         </div>
