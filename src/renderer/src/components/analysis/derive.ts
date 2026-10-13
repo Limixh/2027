@@ -11,7 +11,7 @@ export type Period = '30' | '90' | 'all'
 export const KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos']
 
 export const STATUS_LABEL = ['Başlanmadı', 'Çalışılıyor', 'Konu bitti', 'Soru çözüldü', 'Pekişti']
-export const STATUS_COLOR = ['#64748b', '#f59e0b', '#0ea5e9', '#6366f1', '#10b981']
+export const STATUS_COLOR = ['#7b838f', '#bd934c', '#4e99bb', '#6e70c4', '#51b896']
 
 /** Seçili sınav türü ve döneme göre AppData kopyası üretir. */
 export function filterData(data: AppData, type: TypeFilter, period: Period): AppData {

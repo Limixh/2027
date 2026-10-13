@@ -20,7 +20,7 @@ function MistakeCardImpl({
   const [open, setOpen] = useState(false)
   const subject = SUBJECT_MAP[note.subjectId]
   const topic = note.topicId ? TOPIC_MAP[note.topicId] : undefined
-  const color = subject?.color ?? '#64748b'
+  const color = subject?.color ?? '#7b838f'
   const kindColor = MISTAKE_KIND_COLOR[note.kind]
   const long = note.text.length > 220
 
@@ -39,7 +39,7 @@ function MistakeCardImpl({
               <Badge color={color}>{subject?.name ?? 'Ders'}</Badge>
               <Badge color={kindColor}>{MISTAKE_KIND_LABEL[note.kind]}</Badge>
               {note.resolved && (
-                <Badge color="#10b981">
+                <Badge color="#51b896">
                   <Check size={11} strokeWidth={3} /> Çözüldü
                 </Badge>
               )}

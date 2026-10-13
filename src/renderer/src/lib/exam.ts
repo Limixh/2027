@@ -124,9 +124,9 @@ export const MISTAKE_KIND_LABEL: Record<string, string> = {
 }
 
 export const MISTAKE_KIND_COLOR: Record<string, string> = {
-  bilgi: '#ef4444',
-  dikkat: '#f59e0b',
-  sure: '#0ea5e9',
-  yorum: '#a855f7',
-  bos: '#64748b'
+  bilgi: '#c46e6e',
+  dikkat: '#bd934c',
+  sure: '#4e99bb',
+  yorum: '#9a6bc7',
+  bos: '#7b838f'
 }

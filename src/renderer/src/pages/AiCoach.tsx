@@ -60,7 +60,7 @@ function KeySetup({ onSaved }: { onSaved: () => void }): React.JSX.Element {
   return (
     <Card className="mx-auto max-w-xl p-6">
       <div className="mb-4 flex items-center gap-3">
-        <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-white">
+        <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-on-accent">
           <KeyRound size={20} />
         </div>
         <div>
@@ -124,7 +124,7 @@ function CliSetup({ checking, onCheck }: { checking: boolean; onCheck: () => voi
   return (
     <Card className="mx-auto max-w-xl p-6">
       <div className="mb-4 flex items-center gap-3">
-        <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-white">
+        <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-on-accent">
           <Sparkles size={20} />
         </div>
         <div>
@@ -161,7 +161,7 @@ function MessageBubble({ m, streaming }: { m: ChatMessage; streaming?: boolean }
   if (m.role === 'user') {
     return (
       <div className="flex justify-end gap-3">
-        <div className="max-w-[75%] whitespace-pre-wrap rounded-2xl rounded-tr-md bg-accent px-4 py-2.5 text-sm text-white shadow-sm">
+        <div className="max-w-[75%] whitespace-pre-wrap rounded-2xl rounded-tr-md bg-accent px-4 py-2.5 text-sm text-on-accent shadow-sm">
           {m.content}
         </div>
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-3 text-muted">
@@ -172,7 +172,7 @@ function MessageBubble({ m, streaming }: { m: ChatMessage; streaming?: boolean }
   }
   return (
     <div className="group flex gap-3">
-      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-accent to-accent-2 text-white">
+      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-accent to-accent-2 text-on-accent">
         <Sparkles size={15} />
       </div>
       <div className="min-w-0 max-w-[85%] flex-1">
@@ -432,7 +432,7 @@ export default function AiCoach(): React.JSX.Element {
       <Card className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-2 text-white">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-accent to-accent-2 text-on-accent">
               <Bot size={17} />
             </div>
             <div className="min-w-0">
@@ -547,7 +547,7 @@ export default function AiCoach(): React.JSX.Element {
             <div ref={scrollRef} className="flex-1 space-y-5 overflow-y-auto px-6 py-6">
               {messages.length === 0 && !showStreaming && (
                 <div className="mx-auto max-w-2xl pt-6 text-center">
-                  <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-2 text-white shadow-glow">
+                  <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-2 text-on-accent shadow-glow">
                     <Sparkles size={26} />
                   </div>
                   <h2 className="text-lg font-semibold">Merhaba{settings.name ? `, ${settings.name}` : ''}! Bugün ne yapalım?</h2>

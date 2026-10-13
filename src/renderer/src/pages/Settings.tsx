@@ -12,7 +12,7 @@ import {
   UserRound
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { Field as ExamField, Settings } from '../../../shared/types'
+import type { Field as ExamField, Settings, UpdateStatus } from '../../../shared/types'
 import { Button, Card, CardHeader, confirm, Field, Input, NumberInput, PageHeader, Segmented, Select, toast } from '@/components/ui'
 import { CURRICULUM_NOTE, TOTAL_TOPICS } from '@/data/curriculum'
 import { AI_MODELS } from '@/lib/aiContext'
@@ -165,6 +165,49 @@ function AiSettings(): React.JSX.Element {
       </div>
       )}
     </Section>
+  )
+}
+
+function UpdateRow(): React.JSX.Element {
+  const [st, setSt] = useState<UpdateStatus | null>(null)
+  useEffect(() => {
+    if (!window.api) return
+    void window.api.update.status().then(setSt)
+    return window.api.update.onEvent(setSt)
+  }, [])
+  const label: Record<UpdateStatus['state'], string> = {
+    idle: '',
+    checking: 'Denetleniyor…',
+    uptodate: 'Güncelsin ✓',
+    downloading: 'Yeni sürüm indiriliyor…',
+    ready: `Sürüm ${st?.latest ?? ''} hazır — yeniden başlat`,
+    'needs-reinstall': 'Yeni kurulum dosyası gerekiyor',
+    error: st?.error ?? 'Hata'
+  }
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface-2/60 p-3">
+      <div className="text-sm">
+        Sürüm <b className="tabular">{st?.current ?? __APP_VERSION__}</b>
+        {st && st.state !== 'idle' && (
+          <span className={st.state === 'error' ? 'ml-2 text-xs text-danger' : 'ml-2 text-xs text-muted'}>{label[st.state]}</span>
+        )}
+      </div>
+      <div className="ml-auto flex gap-2">
+        {st?.state === 'ready' ? (
+          <Button size="sm" variant="primary" onClick={() => window.api?.update.install()}>
+            Yeniden başlat
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            disabled={!window.api || st?.state === 'checking' || st?.state === 'downloading'}
+            onClick={async () => setSt((await window.api?.update.check()) ?? null)}
+          >
+            Güncellemeleri denetle
+          </Button>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -336,6 +379,7 @@ export default function SettingsPage(): React.JSX.Element {
         </Section>
 
         <Section icon={<Info size={16} />} title="Hakkında">
+          <UpdateRow />
           <p className="text-sm text-muted">
             YKS 2027 Takip — çalışma süresi, denemeler, {TOTAL_TOPICS} konuluk müfredat takibi, hata analizi ve Claude destekli AI koç.
           </p>

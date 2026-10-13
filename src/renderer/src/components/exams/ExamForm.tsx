@@ -493,7 +493,7 @@ function StepButton({
       <span
         className={cn(
           'grid h-5 w-5 place-items-center rounded-full text-[11px]',
-          active ? 'bg-accent text-white' : 'bg-surface-3 text-muted'
+          active ? 'bg-accent text-on-accent' : 'bg-surface-3 text-muted'
         )}
       >
         {n}

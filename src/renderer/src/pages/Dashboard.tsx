@@ -210,7 +210,7 @@ export default function Dashboard(): React.JSX.Element {
       {fresh && (
         <Card className="relative mb-4 overflow-hidden border-accent/30 bg-gradient-to-br from-accent/10 via-surface to-accent-2/10 p-5">
           <div className="flex flex-wrap items-center gap-5">
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-2 text-white shadow-glow">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-accent to-accent-2 text-on-accent shadow-glow">
               <Sparkles size={22} />
             </div>
             <div className="min-w-[260px] flex-1">
@@ -237,7 +237,6 @@ export default function Dashboard(): React.JSX.Element {
       {/* Geri sayım + KPI */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <Card className="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-accent/15 via-surface to-accent-2/10 p-6 lg:col-span-4">
-          <div className="pointer-events-none absolute -right-10 -top-10 h-44 w-44 rounded-full bg-accent/20 blur-3xl" />
           <div className="relative">
             <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted">
               <CalendarClock size={14} className="text-accent" /> YKS 2027&apos;ye
@@ -421,7 +420,7 @@ export default function Dashboard(): React.JSX.Element {
             icon={<RefreshCcw size={16} />}
             title="Bugün tekrar edilecekler"
             subtitle="Aralıklı tekrar planına göre"
-            action={due.length > 0 ? <Badge color="#f59e0b">{due.length} konu</Badge> : undefined}
+            action={due.length > 0 ? <Badge color="#bd934c">{due.length} konu</Badge> : undefined}
           />
           <div className="mt-3 flex-1 border-t border-border">
             {due.length === 0 ? (

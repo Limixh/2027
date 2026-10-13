@@ -142,6 +142,14 @@ export interface Settings {
   breakMinutes: number
 }
 
+export interface Countdown {
+  id: string
+  title: string
+  /** 'YYYY-MM-DDTHH:mm' yerel saat */
+  at: string
+  color?: string
+}
+
 export interface AppData {
   version: 1
   settings: Settings
@@ -151,6 +159,7 @@ export interface AppData {
   mistakeNotes: MistakeNote[]
   goals: Goal[]
   chats: ChatThread[]
+  countdowns: Countdown[]
 }
 
 export interface ChatMessage {
@@ -200,6 +209,16 @@ export type AiStreamEvent =
   | { requestId: string; type: 'done'; stopReason: string | null; model: string; fullText?: string }
   | { requestId: string; type: 'error'; message: string }
 
+export interface UpdateStatus {
+  state: 'idle' | 'checking' | 'uptodate' | 'downloading' | 'ready' | 'needs-reinstall' | 'error'
+  /** Çalışan sürüm */
+  current: string
+  /** Sunucudaki en yeni sürüm */
+  latest?: string
+  notes?: string
+  error?: string
+}
+
 export interface DesktopApi {
   isDesktop: true
   loadData(): Promise<AppData | null>
@@ -220,4 +239,10 @@ export interface DesktopApi {
     onEvent(cb: (ev: AiStreamEvent) => void): () => void
   }
   openExternal(url: string): Promise<void>
+  update: {
+    status(): Promise<UpdateStatus>
+    check(): Promise<UpdateStatus>
+    install(): Promise<void>
+    onEvent(cb: (s: UpdateStatus) => void): () => void
+  }
 }

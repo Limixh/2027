@@ -60,7 +60,7 @@ export function PriorityList({
         <ol className="mt-2 divide-y divide-border/70 px-2 pb-2">
           {list.map((w, i) => {
             const subject = SUBJECT_MAP[w.subjectId]
-            const color = subject?.color ?? '#64748b'
+            const color = subject?.color ?? '#7b838f'
             const dom = dominantKind(w.kinds)
             const status = progress[w.topicId]?.status ?? 0
             const practiceRate = w.practiceSolved >= 5 ? w.practiceWrong / w.practiceSolved : null

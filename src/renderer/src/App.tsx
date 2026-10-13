@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Sidebar } from './components/Sidebar'
+import { UpdateBanner } from './components/UpdateBanner'
 import { ConfirmHost, ToastHost } from './components/ui'
 import { useNav } from './lib/nav'
 import { useStore } from './lib/store'
@@ -11,6 +12,7 @@ import Analysis from './pages/Analysis'
 import Mistakes from './pages/Mistakes'
 import AiCoach from './pages/AiCoach'
 import SettingsPage from './pages/Settings'
+import Focus from './pages/Focus'
 
 const PAGES = {
   dashboard: Dashboard,
@@ -20,7 +22,8 @@ const PAGES = {
   analysis: Analysis,
   mistakes: Mistakes,
   ai: AiCoach,
-  settings: SettingsPage
+  settings: SettingsPage,
+  focus: Focus
 }
 
 function useTheme(): void {
@@ -63,6 +66,16 @@ export default function App(): React.JSX.Element {
   }
 
   const Page = PAGES[page]
+  // Sayaç sayfası tüm pencereyi kaplar (kenar çubuğu yok)
+  if (page === 'focus') {
+    return (
+      <div className="h-full overflow-hidden">
+        <Focus />
+        <ConfirmHost />
+        <ToastHost />
+      </div>
+    )
+  }
   return (
     <div className="flex h-full overflow-hidden">
       <Sidebar />
@@ -73,6 +86,7 @@ export default function App(): React.JSX.Element {
           <Page />
         </div>
       </main>
+      <UpdateBanner />
       <ConfirmHost />
       <ToastHost />
     </div>

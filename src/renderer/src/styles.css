@@ -3,40 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --bg: 246 247 251;
+  /* Sade, nötr palet — tek, sakin bir vurgu rengi */
+  --bg: 247 247 245;
   --surface: 255 255 255;
-  --surface-2: 241 243 248;
-  --surface-3: 229 232 240;
-  --border: 222 226 235;
-  --text: 17 20 33;
-  --muted: 92 99 120;
-  --subtle: 145 151 170;
-  --accent: 99 91 255;
-  --accent-2: 168 85 247;
-  --success: 16 185 129;
-  --warning: 245 158 11;
-  --danger: 239 68 68;
-  --info: 14 165 233;
-  --heat-0: 228 231 239;
+  --surface-2: 242 242 240;
+  --surface-3: 230 230 227;
+  --border: 225 225 221;
+  --text: 30 30 32;
+  --muted: 98 98 104;
+  --subtle: 148 148 153;
+  --accent: 74 108 145;
+  --accent-2: 74 108 145;
+  --on-accent: 255 255 255;
+  --success: 72 140 104;
+  --warning: 176 132 58;
+  --danger: 184 86 86;
+  --info: 74 108 145;
+  --heat-0: 233 233 230;
   color-scheme: light;
 }
 
 .dark {
-  --bg: 11 12 18;
-  --surface: 19 21 30;
-  --surface-2: 26 29 41;
-  --surface-3: 36 40 56;
-  --border: 41 45 62;
-  --text: 236 238 245;
-  --muted: 156 162 184;
-  --subtle: 104 110 133;
-  --accent: 124 116 255;
-  --accent-2: 192 132 252;
-  --success: 52 211 153;
-  --warning: 251 191 36;
-  --danger: 248 113 113;
-  --info: 56 189 248;
-  --heat-0: 30 33 46;
+  --bg: 18 18 20;
+  --surface: 25 25 28;
+  --surface-2: 32 32 36;
+  --surface-3: 43 43 48;
+  --border: 45 45 51;
+  --text: 232 232 235;
+  --muted: 160 160 168;
+  --subtle: 112 112 120;
+  --accent: 124 156 192;
+  --accent-2: 124 156 192;
+  --on-accent: 16 18 22;
+  --success: 112 170 134;
+  --warning: 206 168 98;
+  --danger: 208 118 118;
+  --info: 124 156 192;
+  --heat-0: 36 36 40;
   color-scheme: dark;
 }
 

@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFil
 import { join } from 'path'
 import * as ai from './ai'
 import * as cli from './claudeCli'
+import * as updater from './updater'
 import type { AiChatRequest, AppData, CliChatRequest } from '../shared/types'
 
 const dataDir = (): string => app.getPath('userData')
@@ -64,6 +65,11 @@ function createWindow(): void {
   })
 
   win.on('ready-to-show', () => win.show())
+  win.webContents.once('did-finish-load', () => {
+    // Arayüz yüklendi: bu sürüm sağlıklı, ardından arka planda güncelleme ara
+    updater.markHealthy()
+    if (app.isPackaged) setTimeout(() => void updater.check(win.webContents), 4000)
+  })
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https://')) shell.openExternal(url)
@@ -125,6 +131,9 @@ function registerIpc(): void {
     void ai.chat(e.sender, req)
   })
   ipcMain.handle('ai:abort', (_e, id: string) => ai.abort(id))
+  ipcMain.handle('update:status', () => updater.getStatus())
+  ipcMain.handle('update:check', (e) => updater.check(e.sender))
+  ipcMain.handle('update:install', () => updater.install())
   ipcMain.handle('cli:status', () => cli.status())
   ipcMain.handle('cli:chat', (e, req: CliChatRequest) => cli.chat(e.sender, req))
   ipcMain.handle('cli:abort', (_e, id: string) => cli.abort(id))

@@ -4,10 +4,10 @@ import { estimateField, estimateTyt, net, placement, round2, tytGroupNets, total
 import { sortedExams } from '@/lib/stats'
 
 export const TYT_GROUP_META = [
-  { key: 'turkce', label: 'Türkçe', color: '#ef4444' },
-  { key: 'sosyal', label: 'Sosyal', color: '#f59e0b' },
-  { key: 'matematik', label: 'Matematik', color: '#6366f1' },
-  { key: 'fen', label: 'Fen', color: '#10b981' }
+  { key: 'turkce', label: 'Türkçe', color: '#c46e6e' },
+  { key: 'sosyal', label: 'Sosyal', color: '#bd934c' },
+  { key: 'matematik', label: 'Matematik', color: '#6e70c4' },
+  { key: 'fen', label: 'Fen', color: '#51b896' }
 ] as const
 
 /** Deneme içindeki dersler (müfredat sırasıyla) */

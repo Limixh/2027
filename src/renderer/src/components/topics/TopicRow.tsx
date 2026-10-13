@@ -115,7 +115,7 @@ function TopicRowImpl({
   const meta = STATUS_META[status]
   const due = overdue !== undefined
   const acc = solved && solved.correct + solved.wrong > 0 ? solved.correct / (solved.correct + solved.wrong) : undefined
-  const accColor = acc === undefined ? undefined : acc >= 0.8 ? '#10b981' : acc >= 0.6 ? '#f59e0b' : '#ef4444'
+  const accColor = acc === undefined ? undefined : acc >= 0.8 ? '#51b896' : acc >= 0.6 ? '#bd934c' : '#c46e6e'
 
   const onKey = (e: KeyboardEvent<HTMLDivElement>): void => {
     if (e.target !== e.currentTarget) return

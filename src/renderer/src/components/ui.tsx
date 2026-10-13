@@ -21,7 +21,7 @@ type Size = 'sm' | 'md' | 'lg' | 'icon'
 
 const variants: Record<Variant, string> = {
   primary:
-    'bg-accent text-white hover:bg-accent/90 shadow-[0_6px_20px_-8px_rgb(var(--accent)/0.8)] active:translate-y-px',
+    'bg-accent text-on-accent hover:bg-accent/90 active:translate-y-px',
   secondary: 'bg-surface-2 text-text hover:bg-surface-3 border border-border',
   outline: 'border border-border text-text hover:bg-surface-2',
   ghost: 'text-muted hover:text-text hover:bg-surface-2',
@@ -269,7 +269,7 @@ export function ProgressBar({
         className="h-full rounded-full transition-[width] duration-500 ease-out"
         style={{
           width: `${pct}%`,
-          background: color ?? 'linear-gradient(90deg, rgb(var(--accent)), rgb(var(--accent-2)))'
+          background: color ?? 'rgb(var(--accent))'
         }}
       />
     </div>
@@ -342,7 +342,7 @@ export function StatCard({
   return (
     <Card className={cn('relative overflow-hidden p-4', className)}>
       <div
-        className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-[0.12] blur-xl"
+        className="pointer-events-none absolute -right-6 -top-6 hidden h-20 w-20 rounded-full opacity-[0.12] blur-xl"
         style={{ background: accent }}
       />
       <div className="flex items-center justify-between">

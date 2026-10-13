@@ -68,19 +68,19 @@ function t(subjectId: string, items: (string | [group: string, names: string[]])
 /* ------------------------------------------------------------------ */
 
 const C = {
-  turkce: '#ef4444',
-  tarih: '#f59e0b',
-  tarih2: '#d97706',
-  cografya: '#14b8a6',
-  cografya2: '#0d9488',
-  felsefe: '#8b5cf6',
-  din: '#d946ef',
-  matematik: '#6366f1',
-  geometri: '#06b6d4',
-  fizik: '#3b82f6',
-  kimya: '#f97316',
-  biyoloji: '#22c55e',
-  edebiyat: '#ec4899'
+  turkce: '#c46e6e',
+  tarih: '#bd934c',
+  tarih2: '#bf894b',
+  cografya: '#53b6ab',
+  cografya2: '#51b8af',
+  felsefe: '#876bc7',
+  din: '#b96ec4',
+  matematik: '#6e70c4',
+  geometri: '#4baebe',
+  fizik: '#6a8dc7',
+  kimya: '#c07d4f',
+  biyoloji: '#59b079',
+  edebiyat: '#c27098'
 }
 
 /* ------------------------------------------------------------------ */

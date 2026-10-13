@@ -5,8 +5,8 @@ import { Card, CardHeader, Dot } from '@/components/ui'
 import type { SubjectMistakeStat } from './derive'
 import { AXIS_TICK, TipBox } from './parts'
 
-const WRONG = '#ef4444'
-const BLANK = '#64748b'
+const WRONG = '#c46e6e'
+const BLANK = '#7b838f'
 
 export function WrongBlank({ stats }: { stats: SubjectMistakeStat[] }): React.JSX.Element {
   const data = useMemo(

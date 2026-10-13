@@ -4,6 +4,7 @@ import {
   Bot,
   CalendarClock,
   ClipboardList,
+  AlarmClock,
   Flame,
   LayoutDashboard,
   Moon,
@@ -29,7 +30,8 @@ const NAV: { id: PageId; label: string; icon: React.ElementType }[] = [
   { id: 'topics', label: 'Konu Takibi', icon: BookOpenCheck },
   { id: 'analysis', label: 'Hata Analizi', icon: BarChart3 },
   { id: 'mistakes', label: 'Hata Defteri', icon: NotebookPen },
-  { id: 'ai', label: 'AI Koç', icon: Bot }
+  { id: 'ai', label: 'AI Koç', icon: Bot },
+  { id: 'focus', label: 'Sayaç', icon: AlarmClock }
 ]
 
 function MiniTimer(): React.JSX.Element | null {
@@ -52,7 +54,7 @@ function MiniTimer(): React.JSX.Element | null {
           <span className="tabular text-lg font-semibold text-text">{fmtClock(ms)}</span>
         </button>
         <button
-          className="grid h-7 w-7 place-items-center rounded-lg bg-accent text-white"
+          className="grid h-7 w-7 place-items-center rounded-lg bg-accent text-on-accent"
           onClick={() => (timer.running ? timer.pause() : timer.start())}
           aria-label={timer.running ? 'Duraklat' : 'Devam et'}
         >
@@ -82,7 +84,7 @@ export function Sidebar(): React.JSX.Element {
       <div className="flex h-10 items-center px-5" />
       <div className="no-drag px-5 pb-5">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-sm font-bold text-white shadow-glow">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-accent to-accent-2 text-sm font-bold text-on-accent shadow-glow">
             27
           </div>
           <div>
@@ -124,7 +126,7 @@ export function Sidebar(): React.JSX.Element {
               <Icon size={17} className={active ? 'text-accent' : 'text-subtle group-hover:text-muted'} />
               {item.label}
               {item.id === 'ai' && (
-                <span className="ml-auto rounded bg-gradient-to-r from-accent to-accent-2 px-1.5 text-[10px] font-semibold text-white">
+                <span className="ml-auto rounded bg-gradient-to-r from-accent to-accent-2 px-1.5 text-[10px] font-semibold text-on-accent">
                   AI
                 </span>
               )}

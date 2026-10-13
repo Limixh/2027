@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AiChatRequest, CliChatRequest, AiStreamEvent, AppData, DesktopApi } from '../shared/types'
+import type { AiChatRequest, CliChatRequest, AiStreamEvent, AppData, DesktopApi, UpdateStatus } from '../shared/types'
 
 const api: DesktopApi = {
   isDesktop: true,
@@ -24,7 +24,17 @@ const api: DesktopApi = {
       return () => ipcRenderer.removeListener('ai:event', listener)
     }
   },
-  openExternal: (url: string) => ipcRenderer.invoke('shell:open', url)
+  openExternal: (url: string) => ipcRenderer.invoke('shell:open', url),
+  update: {
+    status: () => ipcRenderer.invoke('update:status'),
+    check: () => ipcRenderer.invoke('update:check'),
+    install: () => ipcRenderer.invoke('update:install'),
+    onEvent: (cb: (s: UpdateStatus) => void) => {
+      const listener = (_e: unknown, s: UpdateStatus): void => cb(s)
+      ipcRenderer.on('update:event', listener)
+      return () => ipcRenderer.removeListener('update:event', listener)
+    }
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)

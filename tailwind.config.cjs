@@ -19,6 +19,7 @@ module.exports = {
         subtle: v('subtle'),
         accent: v('accent'),
         'accent-2': v('accent-2'),
+        'on-accent': v('on-accent'),
         success: v('success'),
         warning: v('warning'),
         danger: v('danger'),
@@ -29,8 +30,8 @@ module.exports = {
         '2xl': '1.125rem'
       },
       boxShadow: {
-        card: '0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -12px rgb(0 0 0 / 0.25)',
-        glow: '0 0 0 1px rgb(var(--accent) / 0.4), 0 8px 30px -8px rgb(var(--accent) / 0.45)'
+        card: '0 1px 2px rgb(0 0 0 / 0.05)',
+        glow: 'none'
       },
       keyframes: {
         'fade-in': { from: { opacity: 0, transform: 'translateY(4px)' }, to: { opacity: 1, transform: 'none' } },

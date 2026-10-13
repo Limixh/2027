@@ -12,15 +12,15 @@ export const KIND_LABEL: Record<SessionKind, string> = {
 }
 
 export const KIND_COLOR: Record<SessionKind, string> = {
-  konu: '#6366f1',
-  soru: '#10b981',
-  tekrar: '#f59e0b',
-  deneme: '#ef4444',
-  diger: '#64748b'
+  konu: '#6e70c4',
+  soru: '#51b896',
+  tekrar: '#bd934c',
+  deneme: '#c46e6e',
+  diger: '#7b838f'
 }
 
 /** Dersi olmayan oturumlar için nötr renk */
-export const OTHER_COLOR = '#8b93a7'
+export const OTHER_COLOR = '#9296a0'
 
 export const subjectColor = (id?: string): string => (id && SUBJECT_MAP[id]?.color) || OTHER_COLOR
 

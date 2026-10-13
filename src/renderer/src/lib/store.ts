@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type {
   AppData,
+  Countdown,
   ChatThread,
   ExamResult,
   Goal,
@@ -38,7 +39,8 @@ export const emptyData = (): AppData => ({
   topicProgress: {},
   mistakeNotes: [],
   goals: [],
-  chats: []
+  chats: [],
+  countdowns: []
 })
 
 /** Eski/eksik veriyi güncel şemaya tamamla */
@@ -53,7 +55,8 @@ export function normalize(raw: Partial<AppData> | null | undefined): AppData {
     topicProgress: raw.topicProgress && typeof raw.topicProgress === 'object' ? raw.topicProgress : {},
     mistakeNotes: Array.isArray(raw.mistakeNotes) ? raw.mistakeNotes : [],
     goals: Array.isArray(raw.goals) ? raw.goals : [],
-    chats: Array.isArray(raw.chats) ? raw.chats : []
+    chats: Array.isArray(raw.chats) ? raw.chats : [],
+    countdowns: Array.isArray(raw.countdowns) ? raw.countdowns : []
   }
 }
 
@@ -117,6 +120,9 @@ interface Store {
   addGoal(g: NewGoal): Goal
   updateGoal(id: string, patch: Partial<Goal>): void
   deleteGoal(id: string): void
+
+  addCountdown(c: Omit<Countdown, 'id'>): void
+  deleteCountdown(id: string): void
 
   upsertChat(thread: ChatThread): void
   deleteChat(id: string): void
@@ -231,6 +237,13 @@ export const useStore = create<Store>((set, get) => {
     },
     deleteGoal(id) {
       mutate((d) => ({ ...d, goals: d.goals.filter((g) => g.id !== id) }))
+    },
+
+    addCountdown(c) {
+      mutate((d) => ({ ...d, countdowns: [...d.countdowns, { ...c, id: uid() }] }))
+    },
+    deleteCountdown(id) {
+      mutate((d) => ({ ...d, countdowns: d.countdowns.filter((c) => c.id !== id) }))
     },
 
     upsertChat(thread) {

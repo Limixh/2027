@@ -13,7 +13,6 @@ export function InsightsCard({ insights }: { insights: Insight[] }): React.JSX.E
   const go = useNav((s) => s.go)
   return (
     <Card className="relative overflow-hidden">
-      <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-accent/15 blur-2xl" />
       <CardHeader icon={<Sparkles size={16} />} title="Otomatik içgörüler" subtitle="Verilerinden çıkan öne çıkanlar" />
       <div className="space-y-2.5 px-5 pb-5 pt-3">
         {insights.length === 0 ? (

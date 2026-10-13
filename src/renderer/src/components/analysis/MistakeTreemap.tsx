@@ -33,7 +33,7 @@ interface NodeProps {
 
 function Cell(p: NodeProps): React.JSX.Element {
   const { x, y, width, height, depth, name } = p
-  const fill = p.fill ?? '#64748b'
+  const fill = p.fill ?? '#7b838f'
   if (depth === 0) return <g />
   if (depth === 1) {
     return (

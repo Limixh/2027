@@ -99,7 +99,7 @@ export default function ExamDetail({
       width={940}
       title={
         <span className="inline-flex items-center gap-2">
-          <Badge color={exam.type === 'TYT' ? '#6366f1' : '#ec4899'}>{exam.type}</Badge>
+          <Badge color={exam.type === 'TYT' ? '#6e70c4' : '#c27098'}>{exam.type}</Badge>
           {exam.name}
         </span>
       }

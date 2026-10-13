@@ -15,6 +15,7 @@ YKS 2027'ye hazırlanırken çalışmanı, denemelerini, konu ilerlemeni ve hata
 | **Hata Analizi** | Hangi konularda yanlışın var: öncelik puanlı zayıf konu listesi, ders performans tablosu, hata türü dağılımı, otomatik içgörüler |
 | **Hata Defteri** | Yanlış yaptığın soruları not al, "doğrusu/çıkardığım ders" yaz, kart modunda tekrar et |
 | **AI Koç** | Claude'a bağlan; tüm verilerin otomatik özetlenip gönderilir. Deneme analizi, haftalık program, zayıf konu stratejisi... |
+| **Sayaç** | Tam ekran, sade (Apple tarzı) sayfa: YKS ve kendi geri sayımların, turlu kronometre, zamanlayıcı. F11 = tam ekran, Esc = çıkış |
 | **Ayarlar** | Alan (SAY/EA/SÖZ/DİL), hedef netler, OBP, sınav tarihi, tema (koyu/açık), yedek al/yükle, örnek veri |
 
 Veriler bilgisayarında yerel olarak saklanır (`%APPDATA%/YKS 2027 Takip/yks-data.json`), her gün otomatik yedek alınır.
@@ -30,7 +31,15 @@ GitHub'da **Actions → Windows build** iş akışının son çalışmasından `
 
 > İmzasız bir uygulama olduğu için Windows SmartScreen "Windows bilgisayarınızı korudu" uyarısı gösterebilir: **Ek bilgi → Yine de çalıştır**.
 
-### Kaynaktan derleme
+#### Otomatik güncelleme
+Uygulama her açılışta GitHub'daki `updates/latest.json` dosyasını kontrol eder. Yeni sürüm varsa arka planda indirir (~1 MB) ve
+sağ altta **"Yeni sürüm hazır — yeniden başlat"** bildirimi gösterir. Verilerin korunur. Ayarlar → Hakkında'dan elle de denetlenebilir.
+(Repo herkese açık olmalı; gizli repoda güncelleme dosyasına erişilemez.)
+
+Yeni sürüm yayınlamak (geliştirici için): `package.json` sürümünü artır → `npm run update:bundle -- "sürüm notu"` → `updates/` klasörünü commit + push.
+Electron sürümü veya `bootstrap`/`preload` değişirse `scripts/make-update.mjs` içindeki `MIN_SHELL` artırılır; bu durumda kullanıcıdan yeni kurulum dosyası istenir.
+
+## Kaynaktan derleme
 [Node.js 22](https://nodejs.org) kurulu olmalı.
 
 ```bash

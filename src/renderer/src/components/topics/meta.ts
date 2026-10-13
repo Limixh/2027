@@ -1,11 +1,11 @@
 import type { TopicStatus } from '../../../../shared/types'
 
 export const STATUS_META: { value: TopicStatus; label: string; color: string }[] = [
-  { value: 0, label: 'Başlanmadı', color: '#94a3b8' },
-  { value: 1, label: 'Çalışılıyor', color: '#f59e0b' },
-  { value: 2, label: 'Konu bitti', color: '#0ea5e9' },
-  { value: 3, label: 'Soru çözüldü', color: '#8b5cf6' },
-  { value: 4, label: 'Pekişti', color: '#10b981' }
+  { value: 0, label: 'Başlanmadı', color: '#8f97a3' },
+  { value: 1, label: 'Çalışılıyor', color: '#bd934c' },
+  { value: 2, label: 'Konu bitti', color: '#4e99bb' },
+  { value: 3, label: 'Soru çözüldü', color: '#876bc7' },
+  { value: 4, label: 'Pekişti', color: '#51b896' }
 ]
 
 /** Türkçe karakterlere duyarsız arama için metni sadeleştirir */
