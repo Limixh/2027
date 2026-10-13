@@ -30,7 +30,19 @@ Nasıl cevap vermelisin:
 - Çalışma programı hazırlarken öğrencinin günlük hedef süresini, zayıf konularını, tekrar zamanı gelen konuları ve sınava kalan süreyi dikkate al; TYT ve AYT dengesini öğrencinin alanına göre kur.
 - Hata türlerini (bilgi eksiği, dikkat hatası, süre, soru kökünü yanlış yorumlama) ayrı ayrı yorumla ve her biri için farklı strateji öner.
 - Uzun cevaplarda başlıklar ve maddeler kullan, ama gereksiz uzatma.
-- Öğrencinin sağlığını, uykusunu ve motivasyonunu da gözet; tükenmişlik belirtisi görürsen nazikçe değin.`
+- Öğrencinin sağlığını, uykusunu ve motivasyonunu da gözet; tükenmişlik belirtisi görürsen nazikçe değin.
+
+Uygulamayı yönetme (eylemler):
+Sen sadece sohbet etmiyorsun; uygulamada değişiklik ÖNEREBİLİRSİN. Öğrenci plan oluşturmanı, bir konuyu işaretlemeni, geri sayım ya da hata notu eklemeni isterse (veya bir plan istediği belliyse) cevabının EN SONUNA tek bir kod bloğu ekle; dili \`yks-actions\` olsun ve içinde yalnızca geçerli JSON bulunsun: {"actions":[...]}. Uygulama bu bloğu öğrenciye onay kartı olarak gösterir; öğrenci onaylamadan hiçbir şey değişmez. Blok dışında JSON tekrar etme, planı ayrıca tablo olarak yazma — blok öncesinde 2-4 cümlelik kısa bir açıklama yeterli.
+Eylem türleri:
+1. Günlük plan: {"type":"plan","date":"YYYY-MM-DD","summary":"planın kısa mantığı","tasks":[{"title":"kısa görev başlığı","subjectId":"tyt-matematik","topic":"katalogdaki konu adı","kind":"konu|soru|tekrar|deneme|diger","scope":"konunun hangi kısmı (tamamıysa boş bırak)","completesTopic":true,"targetMinutes":50,"targetQuestions":40,"time":"09:00"}]}
+   - kind: konu = konu çalışma, soru = soru çözme, tekrar = tekrar, deneme = deneme sınavı, diger = diğer.
+   - completesTopic: görev bitince konu tamamen bitmiş sayılacaksa true; konunun sadece bir kısmıysa false ve scope'u doldur.
+   - Planın toplam süresi öğrencinin günlük hedefine yakın olsun; molaları görev yapma, saatlerde boşluk bırak. Tarih belirtilmediyse bugünün tarihini kullan.
+2. Konu durumu: {"type":"topic_status","subjectId":"...","topic":"...","status":0-4} (0 başlanmadı, 1 çalışılıyor, 2 konu bitti, 3 soru çözüldü, 4 pekişti)
+3. Geri sayım: {"type":"countdown","title":"...","at":"YYYY-MM-DDTHH:mm"}
+4. Hata defteri notu: {"type":"mistake_note","subjectId":"...","topic":"...","text":"hata","lesson":"doğrusu / çıkarılan ders","kind":"bilgi|dikkat|sure|yorum|bos"}
+subjectId için yalnızca konu kataloğundaki kimlikleri, topic için katalogdaki yazımı kullan. Öğrenci eylem istemediyse blok ekleme.`
 
 const pct = (n: number): string => `%${Math.round(n * 100)}`
 
@@ -43,7 +55,10 @@ export function buildContext(data: AppData): string {
     lines.push(...l)
   }
 
-  push('# Öğrencinin güncel verileri', `Bugün: ${today} (${weekdayName(today)})`)
+  push(
+    '# Öğrencinin güncel verileri',
+    `Bugün: ${today} (${weekdayName(today)}), şu an saat ${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} — bugünün planı şu andan sonraki saatlerle başlamalı`
+  )
 
   // Profil
   push(
@@ -180,6 +195,25 @@ export function buildContext(data: AppData): string {
     }
   }
 
+  // Günlük planlar (bugün ve yarın)
+  for (const key of [today, addDays(today, 1)]) {
+    const plan = data.plans[key]
+    if (!plan?.tasks.length) continue
+    const done = plan.tasks.filter((t) => t.done).length
+    push('', `## ${key === today ? 'Bugünün' : 'Yarının'} planı (${key}) — ${done}/${plan.tasks.length} görev bitti`)
+    for (const t of plan.tasks) {
+      const subj = t.subjectId ? SUBJECT_MAP[t.subjectId]?.short : ''
+      const topic = t.topicId ? TOPIC_MAP[t.topicId]?.name : ''
+      push(
+        `- [${t.done ? 'x' : ' '}] ${t.time ?? ''} ${t.title}${subj ? ` (${subj}${topic ? ' / ' + topic : ''})` : ''}${t.scope ? ` — ${t.scope}` : ''}${t.targetMinutes ? `, ${t.targetMinutes} dk` : ''}${t.targetQuestions ? `, ${t.targetQuestions} soru` : ''}`
+      )
+    }
+  }
+
+  // Konu kataloğu: AI eylemlerinde kullanılacak kimlik ve adlar
+  push('', '## Konu kataloğu (eylemlerde subjectId ve konu adı olarak bunları kullan)')
+  for (const subject of relevant) push(`- ${subject.id} (${subject.exam} ${subject.name}): ${subject.topics.map((t) => t.name).join('; ')}`)
+
   // Hedefler
   if (data.goals.length) {
     push('', '## Hedefler')
@@ -189,12 +223,16 @@ export function buildContext(data: AppData): string {
   return lines.join('\n')
 }
 
+export const PLAN_PROMPT =
+  'Verilerime göre bugün için saatli bir çalışma planı oluştur ve uygulamaya eklenebilmesi için yks-actions bloğu olarak ver. Tekrar zamanı gelen konuları, zayıf konularımı ve günlük hedef süremi dikkate al; konu çalışma ile soru çözümünü dengele.'
+
 export const QUICK_PROMPTS: { label: string; prompt: string; icon: string }[] = [
+  { label: 'Bugünün planını oluştur', icon: '📋', prompt: PLAN_PROMPT },
   {
     label: 'Bugün ne çalışayım?',
     icon: '🎯',
     prompt:
-      'Verilerime bakarak bugün için saat saat bir çalışma planı hazırla. Tekrar zamanı gelen konuları, zayıf konularımı ve günlük hedef süremi dikkate al.'
+      'Şu an ne çalışmalıyım? Verilerime göre tek bir sonraki adımı (ders, konu, ne kadar süre, kaç soru) ve nedenini kısaca söyle.'
   },
   {
     label: 'Son denemelerimi analiz et',
@@ -206,7 +244,7 @@ export const QUICK_PROMPTS: { label: string; prompt: string; icon: string }[] = 
     label: 'Haftalık program',
     icon: '🗓️',
     prompt:
-      'Önümüzdeki 7 gün için gün gün bir çalışma programı hazırla (tablo halinde). Zayıf konularımı, başlanmamış konuları, tekrar zamanı gelenleri ve deneme gününü dahil et. Günlük hedef süreme uy.'
+      'Önümüzdeki 7 gün için gün gün bir çalışma programı hazırla ve her gün için ayrı bir plan eylemi olarak yks-actions bloğunda ver. Zayıf konularımı, başlanmamış konuları, tekrar zamanı gelenleri ve bir deneme gününü dahil et. Günlük hedef süreme uy.'
   },
   {
     label: 'En zayıf konularım',
@@ -228,7 +266,7 @@ export const QUICK_PROMPTS: { label: string; prompt: string; icon: string }[] = 
   }
 ]
 
-export const ANALYSIS_PROMPT = QUICK_PROMPTS[1].prompt
+export const ANALYSIS_PROMPT = QUICK_PROMPTS[2].prompt
 
 export const AI_MODELS = [
   { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', hint: 'En iyi analiz (önerilen)' },

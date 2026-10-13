@@ -214,6 +214,8 @@ export interface ChatMessage {
   content: string
   createdAt: string
   error?: boolean
+  /** Mesajdaki AI eylemleri uygulandı mı / reddedildi mi */
+  actionsState?: 'applied' | 'rejected'
 }
 
 export interface ChatThread {

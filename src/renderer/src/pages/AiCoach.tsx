@@ -6,6 +6,7 @@ import {
   Database,
   Eye,
   KeyRound,
+  ListChecks,
   MessageSquarePlus,
   Sparkles,
   Square,
@@ -18,7 +19,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ChatMessage, ChatThread, CliStatus } from '../../../shared/types'
 import { Button, Card, cn, confirm, Input, Modal, toast } from '@/components/ui'
-import { AI_MODELS, ANALYSIS_PROMPT, buildCliPrompt, buildContext, QUICK_PROMPTS, SYSTEM_PROMPT } from '@/lib/aiContext'
+import { ActionsCard } from '@/components/ai/ActionsCard'
+import { splitActions } from '@/lib/aiActions'
+import { AI_MODELS, ANALYSIS_PROMPT, PLAN_PROMPT, buildCliPrompt, buildContext, QUICK_PROMPTS, SYSTEM_PROMPT } from '@/lib/aiContext'
 import { relativeDay, todayKey } from '@/lib/date'
 import { uid } from '@/lib/id'
 import { useNav } from '@/lib/nav'
@@ -156,8 +159,18 @@ function CliSetup({ checking, onCheck }: { checking: boolean; onCheck: () => voi
   )
 }
 
-function MessageBubble({ m, streaming }: { m: ChatMessage; streaming?: boolean }): React.JSX.Element {
+function MessageBubble({
+  m,
+  streaming,
+  onActionsState
+}: {
+  m: ChatMessage
+  streaming?: boolean
+  onActionsState?: (s: 'applied' | 'rejected') => void
+}): React.JSX.Element {
   const [copied, setCopied] = useState(false)
+  const parts = useMemo(() => (m.role === 'assistant' && !m.error ? splitActions(m.content) : null), [m.role, m.error, m.content])
+  const shown = parts ? parts.text : m.content
   if (m.role === 'user') {
     return (
       <div className="flex justify-end gap-3">
@@ -189,8 +202,19 @@ function MessageBubble({ m, streaming }: { m: ChatMessage; streaming?: boolean }
             </div>
           ) : m.content ? (
             <div className="prose-ai">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-              {streaming && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-accent align-middle" />}
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{shown}</ReactMarkdown>
+              {streaming && !parts?.pending && (
+                <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-accent align-middle" />
+              )}
+              {parts?.pending && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/5 px-3 py-2 text-xs text-muted">
+                  <ListChecks size={14} className="animate-pulse text-accent" /> Plan / işlemler hazırlanıyor…
+                </div>
+              )}
+              {parts?.error && !streaming && <div className="mt-2 text-xs text-danger">{parts.error}</div>}
+              {parts?.actions && parts.actions.length > 0 && !streaming && onActionsState && (
+                <ActionsCard actions={parts.actions} state={m.actionsState} onState={onActionsState} />
+              )}
             </div>
           ) : (
             <div className="flex items-center gap-2 py-1 text-sm text-muted">
@@ -207,7 +231,7 @@ function MessageBubble({ m, streaming }: { m: ChatMessage; streaming?: boolean }
           <button
             className="mt-1 flex items-center gap-1 text-[11px] text-subtle opacity-0 transition group-hover:opacity-100 hover:text-text"
             onClick={() => {
-              void navigator.clipboard.writeText(m.content)
+              void navigator.clipboard.writeText(shown)
               setCopied(true)
               setTimeout(() => setCopied(false), 1500)
             }}
@@ -306,12 +330,12 @@ export default function AiCoach(): React.JSX.Element {
   }, [active?.messages.length, streaming?.text, activeId])
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, opts?: { newThread?: boolean }) => {
       const content = text.trim()
       if (!content || streamRef.current || !window.api) return
       const nowIso = new Date().toISOString()
       const userMsg: ChatMessage = { id: uid(), role: 'user', content, createdAt: nowIso }
-      const current = useStore.getState().data.chats.find((c) => c.id === activeId)
+      const current = opts?.newThread ? undefined : useStore.getState().data.chats.find((c) => c.id === activeId)
       const thread: ChatThread = current
         ? { ...current, messages: [...current.messages, userMsg], updatedAt: nowIso }
         : {
@@ -347,15 +371,14 @@ export default function AiCoach(): React.JSX.Element {
     [activeId, includeContext, upsertChat, setStream]
   )
 
-  // Analiz sayfasından "AI ile analiz" ile gelindiyse otomatik başlat
+  // Başka sayfadan "AI ile analiz / plan oluştur" ile gelindiyse yeni sohbette otomatik başlat
   const autoRef = useRef(false)
   useEffect(() => {
-    if (autoRef.current || params.prompt !== 'analiz' || !ready) return
+    const prompt = params.prompt === 'analiz' ? ANALYSIS_PROMPT : params.prompt === 'plan' ? PLAN_PROMPT : null
+    if (autoRef.current || !prompt || !ready) return
     autoRef.current = true
-    setActiveId(null)
-    // activeId güncellendikten sonra gönder
-    setTimeout(() => setInput(ANALYSIS_PROMPT), 0)
-  }, [params.prompt, ready])
+    send(prompt, { newThread: true })
+  }, [params.prompt, ready, send])
 
   const copyPrompt = (question?: string): void => {
     const q = question ?? (input.trim() || ANALYSIS_PROMPT)
@@ -572,7 +595,15 @@ export default function AiCoach(): React.JSX.Element {
                 </div>
               )}
               {messages.map((m) => (
-                <MessageBubble key={m.id} m={m} />
+                <MessageBubble
+                  key={m.id}
+                  m={m}
+                  onActionsState={(state) => {
+                    const thread = useStore.getState().data.chats.find((c) => c.id === activeId)
+                    if (thread)
+                      upsertChat({ ...thread, messages: thread.messages.map((x) => (x.id === m.id ? { ...x, actionsState: state } : x)) })
+                  }}
+                />
               ))}
               {showStreaming && (
                 <MessageBubble m={{ id: 'stream', role: 'assistant', content: streaming.text, createdAt: '' }} streaming />
