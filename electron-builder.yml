@@ -1,0 +1,29 @@
+appId: com.yks2027.takip
+productName: YKS 2027 Takip
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+asarUnpack: []
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: ${productName}-${version}-${arch}.${ext}
+portable:
+  artifactName: ${productName}-${version}-Portable.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: YKS 2027 Takip
+  installerLanguages: [tr_TR]
+  language: '1055'
+npmRebuild: false

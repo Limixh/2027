@@ -1,0 +1,30 @@
+import { contextBridge, ipcRenderer } from 'electron'
+import type { AiChatRequest, AiStreamEvent, AppData, DesktopApi } from '../shared/types'
+
+const api: DesktopApi = {
+  isDesktop: true,
+  loadData: () => ipcRenderer.invoke('data:load'),
+  saveData: (data: AppData) => ipcRenderer.invoke('data:save', data),
+  exportData: (json: string) => ipcRenderer.invoke('data:export', json),
+  importData: () => ipcRenderer.invoke('data:import'),
+  getDataPath: () => ipcRenderer.invoke('data:path'),
+  ai: {
+    hasKey: () => ipcRenderer.invoke('ai:hasKey'),
+    setKey: (key: string) => ipcRenderer.invoke('ai:setKey', key),
+    clearKey: () => ipcRenderer.invoke('ai:clearKey'),
+    testKey: (model: string) => ipcRenderer.invoke('ai:test', model),
+    chat: (req: AiChatRequest) => ipcRenderer.invoke('ai:chat', req),
+    abort: (id: string) => ipcRenderer.invoke('ai:abort', id),
+    onEvent: (cb: (ev: AiStreamEvent) => void) => {
+      const listener = (_e: unknown, ev: AiStreamEvent): void => cb(ev)
+      ipcRenderer.on('ai:event', listener)
+      return () => ipcRenderer.removeListener('ai:event', listener)
+    }
+  },
+  openExternal: (url: string) => ipcRenderer.invoke('shell:open', url)
+}
+
+contextBridge.exposeInMainWorld('api', api)
+contextBridge.exposeInMainWorld('electronTheme', {
+  changed: (dark: boolean) => ipcRenderer.send('theme:changed', dark)
+})
