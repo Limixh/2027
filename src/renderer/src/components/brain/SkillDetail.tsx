@@ -239,6 +239,12 @@ export function SkillDetail({
     <article className="min-w-0 pb-16">
       {/* Başlık */}
       <div className="pb-6">
+        <InlineText
+          value={skill.area ?? ''}
+          placeholder="Alan ekle (ör. Cebir)"
+          onSave={(v) => update(skill.id, { area: v || undefined })}
+          className="mb-1 text-[11px] font-medium uppercase tracking-wider text-subtle"
+        />
         <InlineText value={skill.name} onSave={(v) => update(skill.id, { name: v })} className="text-[26px] font-semibold leading-tight tracking-tight" />
         <div className="mt-1">
           <InlineText

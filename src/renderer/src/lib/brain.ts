@@ -60,28 +60,33 @@ const topicLabel = (id: string): string => {
 }
 
 /**
- * AI'ye verilen hafıza: mevcut beceriler (id ile). AI yeni bir soruyu analiz ederken
- * aynı beceri daha önce farklı bir konuda çıktıysa onu tanıyıp aynı id'yi kullanır.
+ * AI'ye verilen hafıza. İki kısım:
+ * 1) En ilgili becerilerin ayrıntısı (aynı konu > aynı ders > en zayıf), son kanıtlarıyla
+ * 2) Geri kalan TÜM becerilerin kısa kataloğu (id | ad | alan) — AI yeni beceri uydurmak yerine
+ *    var olanı tanıyıp aynı id'yi kullansın diye. Böylece aynı eksik farklı konularda birleşir.
  */
-export function memoryForPrompt(data: AppData, opts: { subjectId?: string; limit?: number } = {}): string {
-  const limit = opts.limit ?? 60
+export function memoryForPrompt(data: AppData, opts: { subjectId?: string; topicId?: string; limit?: number } = {}): string {
+  const limit = opts.limit ?? 25
   const list = sortedSkills(data)
   if (!list.length) return ''
-  // Aynı dersteki beceriler önce, sonra en zayıflar
-  const rank = (s: (typeof list)[number]): number => (opts.subjectId && s.strength.subjects.includes(opts.subjectId) ? 0 : 1)
-  const chosen = list.slice().sort((a, b) => rank(a) - rank(b)).slice(0, limit)
-  return chosen
-    .map((s) => {
-      const last = s.evidence
-        .slice(-3)
-        .map((e) => {
-          const note = e.noteId ? data.mistakeNotes.find((m) => m.id === e.noteId) : undefined
-          return `${e.date} ${e.kind}${e.topicId ? ` (${topicLabel(e.topicId)})` : ''}${e.detail ? `: ${e.detail.slice(0, 120)}` : ''}${note?.text ? ` [soru notu: ${note.text.slice(0, 80)}]` : ''}`
-        })
-        .join(' | ')
-      return `- id=${s.id} · "${s.name}" · ${STATUS_LABEL[s.strength.status]} (${s.strength.score}/100) · konular: ${s.topicIds.map(topicLabel).join(', ') || '-'}${last ? ` · son kanıtlar: ${last}` : ''}`
-    })
-    .join('\n')
+  const rank = (s: (typeof list)[number]): number =>
+    opts.topicId && s.topicIds.includes(opts.topicId) ? 0 : opts.subjectId && s.strength.subjects.includes(opts.subjectId) ? 1 : 2
+  const ordered = list.slice().sort((a, b) => rank(a) - rank(b) || a.strength.score - b.strength.score)
+  const detailed = ordered.slice(0, limit)
+  const rest = ordered.slice(limit)
+  const lines = detailed.map((s) => {
+    const last = s.evidence
+      .slice(-3)
+      .map((e) => {
+        const note = e.noteId ? data.mistakeNotes.find((m) => m.id === e.noteId) : undefined
+        return `${e.date} ${e.kind}${e.topicId ? ` (${topicLabel(e.topicId)})` : ''}${e.detail ? `: ${e.detail.slice(0, 120)}` : ''}${note?.text ? ` [soru notu: ${note.text.slice(0, 80)}]` : ''}`
+      })
+      .join(' | ')
+    return `- id=${s.id} · "${s.name}"${s.area ? ` · alan: ${s.area}` : ''} · ${STATUS_LABEL[s.strength.status]} (${s.strength.score}/100)${s.description ? ` · tanım: ${s.description.slice(0, 140)}` : ''} · konular: ${s.topicIds.map(topicLabel).join(', ') || '-'}${last ? ` · son kanıtlar: ${last}` : ''}`
+  })
+  if (rest.length)
+    lines.push(`\nDiğer beceriler (kısa katalog — bunlardan biri uyuyorsa onun id'sini kullan):\n${rest.map((s) => `- ${s.id} | ${s.name}${s.area ? ` | ${s.area}` : ''}`).join('\n')}`)
+  return lines.join('\n')
 }
 
 /** Bir becerinin "tekrar zamanı" geldi mi: zayıfsa ve 3 günden uzun süredir dokunulmadıysa */

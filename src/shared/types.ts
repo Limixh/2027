@@ -145,6 +145,8 @@ export interface Skill {
   name: string
   /** Becerinin kısa tanımı (AI veya öğrenci) */
   description?: string
+  /** Genel alan, ör. "Cebir", "Olasılık", "Paragraf" */
+  area?: string
   /** Bu becerinin görüldüğü konular (farklı derslerden olabilir) */
   topicIds: string[]
   /** Kanıtlar: hangi soruda eksik çıktı / başarıyla kullanıldı */
@@ -296,6 +298,8 @@ export interface AppData {
   plans: Record<string, DailyPlan>
   practiceSets: PracticeSet[]
   skills: Skill[]
+  /** İkinci Beyin bakım bilgisi */
+  brainMeta?: { lastConsolidatedAt?: string; lastConsolidatedCount?: number }
 }
 
 /** Sohbete eklenen dosya (userData/attachments altında saklanır) */

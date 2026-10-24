@@ -69,7 +69,8 @@ export function normalize(raw: Partial<AppData> | null | undefined): AppData {
     countdowns: Array.isArray(raw.countdowns) ? raw.countdowns : [],
     plans: raw.plans && typeof raw.plans === 'object' ? raw.plans : {},
     practiceSets: Array.isArray(raw.practiceSets) ? raw.practiceSets : [],
-    skills: Array.isArray(raw.skills) ? raw.skills : []
+    skills: Array.isArray(raw.skills) ? raw.skills : [],
+    brainMeta: raw.brainMeta && typeof raw.brainMeta === 'object' ? raw.brainMeta : undefined
   }
 }
 
@@ -159,7 +160,8 @@ interface Store {
    * AI analizinden gelen becerileri hafızaya işler: mevcut beceriyle (id veya ad) eşleşirse ona kanıt ekler,
    * yoksa yeni beceri açar; notu becerilere bağlar. Farklı konulardaki sorular böylece aynı beceride buluşur.
    */
-  applySkillAnalysis(noteId: string, items: { id?: string; name: string; role?: string; detail?: string; description?: string }[]): string[]
+  applySkillAnalysis(noteId: string, items: { id?: string; name: string; role?: string; detail?: string; description?: string; area?: string }[]): string[]
+  setBrainMeta(patch: NonNullable<AppData['brainMeta']>): void
   updateSkill(id: string, patch: Partial<Skill>): void
   deleteSkill(id: string): void
   /** source becerisini target'a katar (kanıtlar, konular ve bağlı notlar taşınır) */
@@ -462,7 +464,10 @@ export const useStore = create<Store>((set, get) => {
           if (!name) continue
           let idx = it.id ? skills.findIndex((s) => s.id === it.id) : -1
           if (idx < 0) idx = skills.findIndex((s) => fold(s.name) === fold(name))
-          const kind: SkillEvidence['kind'] = it.role === 'basari' || it.role === 'kullandi' ? 'basari' : it.role === 'zayif' ? 'zayif' : 'eksik'
+          // Öğrenci yalnızca çözemediği soruları ekler; çözüme bakılan soruda hiçbir beceri "başarı" sayılmaz
+          const helped = note.usedSolution || note.kind === 'cozum'
+          let kind: SkillEvidence['kind'] = it.role === 'basari' || it.role === 'kullandi' ? 'basari' : it.role === 'zayif' ? 'zayif' : 'eksik'
+          if (kind === 'basari' && helped) kind = 'zayif'
           // Aynı not için aynı beceriye ikinci kez kanıt yazma (yeniden analizde)
           const ev: SkillEvidence = { id: uid(), date: note.date, kind, detail: it.detail, noteId, topicId: note.topicId, source: 'ai' }
           if (idx < 0) {
@@ -470,6 +475,7 @@ export const useStore = create<Store>((set, get) => {
               id: uid(),
               name,
               description: it.description,
+              area: it.area?.trim() || undefined,
               topicIds: note.topicId ? [note.topicId] : [],
               evidence: [ev],
               createdAt: now(),
@@ -481,6 +487,7 @@ export const useStore = create<Store>((set, get) => {
             skills[idx] = {
               ...s,
               description: s.description || it.description,
+              area: s.area || it.area?.trim() || undefined,
               topicIds: note.topicId && !s.topicIds.includes(note.topicId) ? [...s.topicIds, note.topicId] : s.topicIds,
               evidence: [...s.evidence.filter((e) => !(e.noteId === noteId && e.source === 'ai')), ev],
               updatedAt: now()
@@ -495,6 +502,9 @@ export const useStore = create<Store>((set, get) => {
         }
       })
       return ids
+    },
+    setBrainMeta(patch) {
+      mutate((d) => ({ ...d, brainMeta: { ...(d.brainMeta ?? {}), ...patch } }))
     },
     updateSkill(id, patch) {
       mutate((d) => ({ ...d, skills: d.skills.map((s) => (s.id === id ? { ...s, ...patch, updatedAt: now() } : s)) }))
@@ -515,9 +525,13 @@ export const useStore = create<Store>((set, get) => {
         const merged: Skill = {
           ...t,
           topicIds: [...new Set([...t.topicIds, ...src.topicIds])],
-          evidence: [...t.evidence, ...src.evidence].sort((a, b) => a.date.localeCompare(b.date)),
+          // Aynı sorudan gelen AI kanıtı iki kez sayılmasın
+          evidence: [...t.evidence, ...src.evidence.filter((e) => !(e.source === 'ai' && e.noteId && t.evidence.some((x) => x.source === 'ai' && x.noteId === e.noteId)))].sort((a, b) =>
+            a.date.localeCompare(b.date)
+          ),
           note: [t.note, src.note].filter(Boolean).join('\n\n') || undefined,
           description: t.description || src.description,
+          area: t.area || src.area,
           updatedAt: now()
         }
         return {

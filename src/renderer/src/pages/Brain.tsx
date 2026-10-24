@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Brain as BrainIcon, Loader2, RefreshCw, Search } from 'lucide-react'
+import { Brain as BrainIcon, Loader2, RefreshCw, Search, Sparkles } from 'lucide-react'
 import { Button, Input, Segmented, cn, confirm, toast } from '@/components/ui'
 import { sortedSkills } from '@/lib/brain'
-import { backfillSkills, notesNeedingSkills } from '@/lib/brainSync'
+import { backfillSkills, consolidateBrain, notesNeedingSkills } from '@/lib/brainSync'
 import { useNav } from '@/lib/nav'
 import { useStore } from '@/lib/store'
 import { NoteDetail } from '@/components/mistakes/NoteDetail'
@@ -57,6 +57,37 @@ function SyncButton({ prominent }: { prominent?: boolean }): React.JSX.Element |
   )
 }
 
+function TidyButton(): React.JSX.Element | null {
+  const count = useStore((s) => s.data.skills.length)
+  const [busy, setBusy] = useState(false)
+  if (count < 2) return null
+  const run = async (): Promise<void> => {
+    setBusy(true)
+    try {
+      const r = await consolidateBrain()
+      if (!r) return
+      const parts = [r.merged && `${r.merged} kopya birleşti`, r.renamed && `${r.renamed} ad netleşti`, r.areas && `${r.areas} alan`, r.described && `${r.described} tanım`].filter(Boolean)
+      toast(parts.length ? `Hafıza düzenlendi: ${parts.join(', ')}` : 'Hafıza zaten düzenli')
+    } catch {
+      toast('Hafıza düzenlenemedi', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      disabled={busy}
+      icon={busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+      onClick={() => void run()}
+      title="AI aynı beceriyi anlatan kopyaları birleştirir, adları netleştirir, alan ve tanım ekler"
+    >
+      {busy ? 'Düzenleniyor…' : 'Hafızayı düzenle'}
+    </Button>
+  )
+}
+
 export default function Brain(): React.JSX.Element {
   const data = useStore((s) => s.data)
   const removeNote = useStore((s) => s.deleteMistakeNote)
@@ -79,7 +110,7 @@ export default function Brain(): React.JSX.Element {
   const filtered = useMemo(() => {
     const f = fold(q.trim())
     return all.filter((s) => {
-      if (f && !fold(s.name + ' ' + (s.description ?? '')).includes(f)) return false
+      if (f && !fold(s.name + ' ' + (s.description ?? '') + ' ' + (s.area ?? '')).includes(f)) return false
       if (filter === 'cross') return isCross(s)
       if (filter !== 'all') return s.strength.status === filter
       return true
@@ -130,7 +161,10 @@ export default function Brain(): React.JSX.Element {
               {all.length} beceri · {weak} zayıf · {cross} farklı konuya yayılan
             </p>
           </div>
-          <SyncButton />
+          <div className="flex items-center gap-2">
+            <TidyButton />
+            <SyncButton />
+          </div>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-border pb-4">
           <Segmented

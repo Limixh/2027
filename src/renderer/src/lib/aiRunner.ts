@@ -79,10 +79,10 @@ export function analysisPrompt(p: {
     p.correctAnswer ? `Doğru cevap (cevap anahtarından): ${p.correctAnswer} — çözümün bu cevaba ulaşmalı; ulaşamıyorsan bunu açıkça söyle.` : '',
     p.myAnswer ? `Öğrencinin işaretlediği cevap: ${p.myAnswer}.` : '',
     p.usedSolution
-      ? 'Öğrenci bu soruyu kendisi çözemeyip ÇÖZÜME BAKARAK yaptı: hangi adımı kendi başına bulamamış olabileceğini ve bu adımı nasıl kendisi bulabileceğini (hangi ipucu/kalıp) özellikle açıkla.'
+      ? 'ÖNEMLİ: Öğrenci bu soruyu kendi başına ÇÖZEMEDİ, ÇÖZÜME BAKARAK yaptı. Görseldeki işlemler (varsa) çözümden bakılarak yazılmış olabilir; doğru görünen adımları onun kendi başarısı SAYMA ve "burayı doğru yapmışsın" deme. Bunun yerine: çözümde hangi fikri/adımı kendi başına bulamamış olabileceğini (genelde ilk hamle, doğru yöntemi seçme ya da kritik dönüşüm), soruda bu adımı tetiklemesi gereken ipucunu ve bir dahaki sefere o adımı kendisinin nasıl bulacağını (sormasi gereken soru, tanıması gereken kalıp) açıkla.'
       : ''
   ].filter(Boolean)
-  return `Ekteki görsel(ler) öğrencinin yanlış yaptığı / çözemediği bir ${p.subject}${p.topic ? ` (${p.topic})` : ''} sorusu.${
+  return `Öğrenci uygulamaya YALNIZCA kendi başına çözemediği / yanlış yaptığı soruları ekler. Ekteki görsel(ler) böyle bir ${p.subject}${p.topic ? ` (${p.topic})` : ''} sorusu.${
     p.hasAttempt ? ' Görsellerden biri öğrencinin silinmemiş, karalamalı kendi çözüm denemesi.' : ''
   }${p.note ? `\nÖğrencinin notu: ${p.note}` : ''}${facts.length ? `\n${facts.join('\n')}` : ''}
 
@@ -102,7 +102,7 @@ ${
 ${
   p.memory
     ? `## Hafızadan: daha önce de olmuş mu?
-Aşağıdaki "öğrencinin beceri hafızası"na bak. Bu sorudaki takılma, daha önce BAŞKA bir konuda da görülmüş bir beceri eksikliğiyle aynı köke sahipse bunu açıkça bağla (ör. "Bu parabol sorusunda kesişim noktasını bulurken takıldığın adım, 2 bilinmeyenli denklemlerde zorlandığın yok etme yöntemiyle aynı"). Bağlantı yoksa bu başlığı tek cümleyle geç.
+Aşağıdaki "öğrencinin beceri hafızası"na bak. Bu sorudaki takılma, daha önce BAŞKA bir konuda da görülmüş bir beceri eksikliğiyle aynı köke sahipse bunu açıkça bağla (ör. "Bu parabol sorusunda kesişim noktasını bulurken takıldığın adım, 2 bilinmeyenli denklemlerde zorlandığın yok etme yöntemiyle aynı"). Becerilerden söz ederken hafızadaki adı AYNEN (tırnak içinde) kullan, yeni ad uydurma. Bağlantı yoksa bu başlığı tek cümleyle geç.
 
 <ogrencinin_beceri_hafizasi>
 ${p.memory}
@@ -111,9 +111,9 @@ ${p.memory}
     : ''
 }
 En sonda tek bir kod bloğu ekle (dili yks-note), içinde yalnızca JSON:
-{"topic":"konunun müfredattaki adı","kind":"bilgi|dikkat|sure|yorum|bos|cozum","summary":"hatanın tek cümlelik özeti","lesson":"akılda tutulacak tek cümle","skills":[{"id":"hafızadaki id (aynı beceriyse) ya da boş","name":"beceri adı","role":"eksik|zayif|basari","detail":"bu soruda bu becerinin rolü, 1 cümle","description":"yeni beceriyse kısa genel tanım"}]}
+{"topic":"konunun müfredattaki adı","kind":"bilgi|dikkat|sure|yorum|bos|cozum","summary":"hatanın tek cümlelik özeti","lesson":"akılda tutulacak tek cümle","skills":[{"id":"hafızadaki id (aynı beceriyse) ya da boş","name":"beceri adı","role":"eksik|zayif|basari","detail":"bu soruda bu becerinin rolü, 1 cümle","description":"yeni beceriyse kısa genel tanım","area":"genel alan"}]}
 
-skills kuralları: Soruyu çözmek için gereken 1-4 temel beceri/yöntem/kavramı yaz. Beceri adı KONUDAN BAĞIMSIZ ve yeniden kullanılabilir olsun (ör. "Denklem sisteminde yok etme yöntemi", "Kesirli ifadelerde payda eşitleme", "Geri koymadan olasılıkta koşullu olasılık", "Paragrafta ana düşünceyi yardımcıdan ayırma"); "parabol sorusu" gibi konu adları beceri değildir. Hafızada aynı ya da çok yakın bir beceri varsa YENİ AD UYDURMA, onun id'sini ve adını aynen kullan. role: öğrencinin yapamadığı adım = eksik, zorlandığı/çözüme baktığı = zayif, doğru kullandığı = basari.`
+skills kuralları: Soruyu çözmek için gereken 1-4 temel beceri/yöntem/kavramı yaz. Beceri adı KONUDAN BAĞIMSIZ ve yeniden kullanılabilir olsun (ör. "Denklem sisteminde yok etme yöntemi", "Kesirli ifadelerde payda eşitleme", "Geri koymadan olasılıkta koşullu olasılık", "Paragrafta ana düşünceyi yardımcıdan ayırma"); "parabol sorusu" gibi konu adları beceri değildir. Hafızada aynı ya da çok yakın bir beceri varsa YENİ AD UYDURMA, onun id'sini ve adını aynen kullan. role: öğrencinin yapamadığı adım = eksik, zorlandığı ya da çözüme bakarak geçtiği = zayif; basari YALNIZCA öğrencinin kendi çözüm denemesinde açıkça ve kendi başına doğru yaptığı bir beceri için (çözüme bakılan soruda basari YAZMA). Asıl takılmanın kök becerisini ilk sıraya koy. area: becerinin genel alanı (ör. "Cebir", "Fonksiyonlar", "Olasılık", "Geometri — üçgenler", "Paragraf", "Dil bilgisi", "Fizik — kuvvet"); hafızadaki benzer becerilerle aynı alan adını kullan.`
 }
 
 export function similarPrompt(p: { subject: string; topic?: string; count: number; analysis?: string }): string {
@@ -140,7 +140,7 @@ export function splitNoteMeta(text: string): {
     kind?: string
     summary?: string
     lesson?: string
-    skills?: { id?: string; name: string; role?: string; detail?: string; description?: string }[]
+    skills?: { id?: string; name: string; role?: string; detail?: string; description?: string; area?: string }[]
   } | null
 } {
   const m = text.match(/```yks-note\s*([\s\S]*?)```/)

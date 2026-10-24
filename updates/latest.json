@@ -1,8 +1,8 @@
 {
-  "version": "1.4.0",
-  "file": "app-1.4.0.json.gz",
-  "sha256": "852b2b433daa77ea468e35d370c89fa153ee85855a963ab7a9a72049fc165b24",
+  "version": "1.5.0",
+  "file": "app-1.5.0.json.gz",
+  "sha256": "98d3b10691528cd7d8b579964bf2df12614404defb4626456d0541db7d4de030",
   "minShell": "1.1.0",
-  "notes": "İkinci Beyin: konular arası bağlantı kuran, kendini güncelleyen beceri hafızası",
+  "notes": "Çözüme bakılan sorular artık başarı sayılmıyor; İkinci Beyin daha iyi eşleştiriyor ve kendini düzenliyor (kopya birleştirme, alanlar)",
   "date": "2026-10-24"
 }

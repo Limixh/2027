@@ -12,6 +12,7 @@ import { resolveTopic } from '@/lib/aiActions'
 import { uid } from '@/lib/id'
 import { useStore } from '@/lib/store'
 import { memoryForPrompt, skillStrength, STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
+import { maybeConsolidate } from '@/lib/brainSync'
 import { useNav } from '@/lib/nav'
 import { KINDS } from './MistakeModal'
 import { NoteImage } from './NoteImage'
@@ -108,7 +109,7 @@ export function NoteDetail({
           myAnswer: note.myAnswer,
           usedSolution: note.usedSolution || note.kind === 'cozum',
           comments: note.comments,
-          memory: memoryForPrompt(useStore.getState().data, { subjectId: note.subjectId }) || undefined
+          memory: memoryForPrompt(useStore.getState().data, { subjectId: note.subjectId, topicId: note.topicId }) || undefined
         }),
         attachments: imgs.length ? imgs : undefined,
         onText: setLive
@@ -127,7 +128,10 @@ export function NoteDetail({
       }
       update(id, patch)
       // (konu güncellendikten sonra) İkinci Beyin: becerileri hafızaya işle (farklı konulardaki aynı beceri burada buluşur)
-      if (meta?.skills?.length) useStore.getState().applySkillAnalysis(id, meta.skills.filter((x) => x && typeof x.name === 'string'))
+      if (meta?.skills?.length) {
+        useStore.getState().applySkillAnalysis(id, meta.skills.filter((x) => x && typeof x.name === 'string'))
+        void maybeConsolidate()
+      }
       setLive('')
     } catch (e) {
       setError(errText(e))

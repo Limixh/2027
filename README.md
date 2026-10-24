@@ -26,6 +26,8 @@ Veriler bilgisayarında yerel olarak saklanır (`%APPDATA%/YKS 2027 Takip/yks-da
 ### Yanlış soruların fotoğrafları
 - Hata Defteri → **Telefondan yükle**: ekrandaki QR kodu telefonla okut (aynı Wi-Fi), açılan sayfada sorunun ve istersen kendi karalamalı çözümünün fotoğrafını çekip gönder. Bilgisayardan dosya seçerek / sürükleyerek / Ctrl+V ile de eklenir.
 - **AI ile analiz et**: doğru çözüm + çözümünde tam olarak nerede, neden takıldığın + bir daha kaçırmamak için ipuçları. **Benzer soru üret**: aynı kazanımı ölçen yeni sorular (cevaplar gizli).
+- **Çözüme bakarak yaptım** işaretliyse AI görseldeki işlemleri senin başarın saymaz; kendi başına bulamadığın adımı ve onu nasıl bulacağını anlatır.
+- İkinci Beyin her analizde mevcut becerilerle eşleştirir; hafıza büyüdükçe AI kopya becerileri kendiliğinden birleştirir, adları netleştirir ve alan (Cebir, Olasılık…) ekler. İstersen **Hafızayı düzenle** ile elle de çalıştırabilirsin.
 - Çözemediğin sorular aralıklı tekrar listesine girer (1 → 3 → 7 → 14 gün); **Bugün tekrar** sekmesinden yeniden çöz, 3 kez üst üste çözünce "öğrenildi" olur.
 
 ## Kurulum (Windows)

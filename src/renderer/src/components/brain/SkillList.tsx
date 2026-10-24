@@ -43,6 +43,12 @@ export function SkillList({
                 </span>
               </div>
               <div className="mt-1.5 flex items-center gap-2 text-[11px] text-subtle">
+                {s.area && (
+                  <>
+                    <span className="truncate text-muted">{s.area}</span>
+                    <span aria-hidden>·</span>
+                  </>
+                )}
                 {isCross(s) && (
                   <span className="inline-flex items-center gap-1 text-accent">
                     <Network size={11} strokeWidth={2} />
