@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type {
   AppData,
+  Book,
   Countdown,
   Skill,
   SkillEvidence,
@@ -70,6 +71,7 @@ export function normalize(raw: Partial<AppData> | null | undefined): AppData {
     plans: raw.plans && typeof raw.plans === 'object' ? raw.plans : {},
     practiceSets: Array.isArray(raw.practiceSets) ? raw.practiceSets : [],
     skills: Array.isArray(raw.skills) ? raw.skills : [],
+    books: Array.isArray(raw.books) ? raw.books : [],
     brainMeta: raw.brainMeta && typeof raw.brainMeta === 'object' ? raw.brainMeta : undefined
   }
 }
@@ -176,6 +178,11 @@ interface Store {
   snapshotBrain(label: string): void
   /** Son geri alma noktasına dön */
   undoBrain(): void
+
+  addBook(b: Omit<Book, 'id' | 'createdAt'>): Book
+  updateBook(id: string, patch: Partial<Book>): void
+  /** Kitabı listeden ve diskten siler (notlardaki kesilmiş soru görselleri kalır) */
+  deleteBook(id: string): void
 
   addCountdown(c: Omit<Countdown, 'id'>): void
   deleteCountdown(id: string): void
@@ -617,6 +624,20 @@ export const useStore = create<Store>((set, get) => {
         }),
         brainMeta: { ...(d.brainMeta ?? {}), undo: undefined }
       }))
+    },
+
+    addBook(b) {
+      const book: Book = { ...b, id: uid(), createdAt: now() }
+      mutate((d) => ({ ...d, books: [...(d.books ?? []), book] }))
+      return book
+    },
+    updateBook(id, patch) {
+      mutate((d) => ({ ...d, books: (d.books ?? []).map((b) => (b.id === id ? { ...b, ...patch } : b)) }))
+    },
+    deleteBook(id) {
+      const b = get().data.books?.find((x) => x.id === id)
+      if (b) void window.api?.books?.remove(b.rel)
+      mutate((d) => ({ ...d, books: (d.books ?? []).filter((x) => x.id !== id) }))
     },
 
     addCountdown(c) {

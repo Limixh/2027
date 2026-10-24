@@ -1,8 +1,8 @@
 {
-  "version": "1.8.0",
-  "file": "app-1.8.0.json.gz",
-  "sha256": "ac0dbd0098f16fd4796c21b19878b101435b4392c10c87d196d11fc096216f55",
+  "version": "1.9.0",
+  "file": "app-1.9.0.json.gz",
+  "sha256": "b8213adbc4f3f695fa534a47aed74bfbe85e7e6b5f673725f9dee4ef8510a9fa",
   "minShell": "1.1.0",
-  "notes": "Tahtada çözüm: AI soruyu el yazısıyla adım adım tahtada çözer, istersen sesli anlatır (Ayarlar'dan açılıp kapanır)",
+  "notes": "Kitaplarım: soru bankası PDF'lerini ekle, sayfa ve soru numarasıyla soruyu otomatik bulup Hata Defteri'ne al",
   "date": "2026-10-24"
 }

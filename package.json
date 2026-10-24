@@ -1,7 +1,7 @@
 {
   "name": "yks-2027-takip",
   "productName": "YKS 2027 Takip",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "YKS 2027 için çalışma takibi, deneme analizi, konu ilerlemesi ve yapay zeka koçu",
   "main": "./out/main/bootstrap.js",
   "author": "YKS 2027 Takip",
@@ -33,6 +33,7 @@
     "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "lucide-react": "^1.56.0",
+    "pdfjs-dist": "^5.7.284",
     "postcss": "^8.4.49",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",

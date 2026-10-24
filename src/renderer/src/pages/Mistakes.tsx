@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ClipboardList, Inbox, Plus, Play, Search, Smartphone, X } from 'lucide-react'
+import { BookOpen, ClipboardList, Inbox, Plus, Play, Search, Smartphone, X } from 'lucide-react'
+import { QuestionPicker } from '@/components/books/QuestionPicker'
 import type { MistakeNote } from '../../../shared/types'
 import { Button, Card, EmptyState, Input, PageHeader, Segmented, Select, cn, confirm, toast } from '@/components/ui'
 import { SUBJECTS, SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
@@ -41,6 +42,8 @@ export default function Mistakes(): React.JSX.Element {
   const [detailId, setDetailId] = useState<string | null>(null)
   const [phone, setPhone] = useState(false)
   const [wizard, setWizard] = useState(false)
+  const [bookPicker, setBookPicker] = useState(false)
+  const hasBooks = useStore((s) => (s.data.books?.length ?? 0) > 0)
   const closeWizard = useCallback(() => setWizard(false), [])
 
   const openNotes = useMemo(() => notes.filter((n) => !n.resolved), [notes])
@@ -145,6 +148,11 @@ export default function Mistakes(): React.JSX.Element {
         actions={
           <>
             <BatchAnalyze />
+            {hasBooks && (
+              <Button variant="outline" icon={<BookOpen size={14} />} onClick={() => setBookPicker(true)} title="Kitaplarım’daki PDF’ten sayfa ve soru numarasıyla soru ekle">
+                Kitaptan ekle
+              </Button>
+            )}
             {inboxCount > 0 && (
               <Button variant="outline" icon={<Inbox size={14} />} onClick={() => setWizard(true)} title="Telefondan gelen soruların bilgilerini sırayla gir">
                 Toplu giriş
@@ -296,6 +304,7 @@ export default function Mistakes(): React.JSX.Element {
       {reviewIds && <ReviewMode ids={reviewIds} onClose={() => setReviewIds(null)} />}
       <PhoneUploadModal open={phone} onClose={() => setPhone(false)} />
       {wizard && <InboxWizard onClose={closeWizard} />}
+      {bookPicker && <QuestionPicker mode="multi" onClose={() => setBookPicker(false)} />}
     </div>
   )
 }

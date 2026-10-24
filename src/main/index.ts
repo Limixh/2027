@@ -7,6 +7,7 @@ import * as cli from './claudeCli'
 import * as codex from './codexCli'
 import { saveAttachment } from './attachments'
 import * as phone from './phoneServer'
+import * as books from './books'
 import * as updater from './updater'
 import type { AiChatRequest, AppData, CliChatRequest } from '../shared/types'
 
@@ -147,13 +148,16 @@ function registerIpc(): void {
   ipcMain.handle('codex:models', () => codex.models())
   ipcMain.handle('codex:login', () => codex.login())
   ipcMain.handle('ai:saveAttachment', (_e, name: string, b64: string) => saveAttachment(name, b64))
+  ipcMain.handle('books:import', () => books.importBooks())
+  ipcMain.handle('books:remove', (_e, rel: string) => books.removeBook(rel))
   ipcMain.handle('cli:status', () => cli.status())
   ipcMain.handle('cli:chat', (e, req: CliChatRequest) => cli.chat(e.sender, req))
   ipcMain.handle('cli:abort', (_e, id: string) => cli.abort(id))
 }
 
 // Kayıtlı ekleri (soru fotoğrafları vb.) arayüzde göstermek için: yks-file://local/attachments/x.png
-protocol.registerSchemesAsPrivileged([{ scheme: 'yks-file', privileges: { standard: true, secure: true, supportFetchAPI: true } }])
+// corsEnabled: arayüz (file://) kitap PDF'lerini fetch ile parça parça okuyabilsin
+protocol.registerSchemesAsPrivileged([{ scheme: 'yks-file', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }])
 
 // Tarih seçiciler ve sayı biçimleri Türkçe olsun
 app.commandLine.appendSwitch('lang', 'tr')
@@ -166,6 +170,15 @@ app.whenReady().then(() => {
     const rel = decodeURIComponent(new URL(req.url).pathname).replace(/^\/+/, '')
     const full = join(root, rel)
     if (!full.startsWith(join(root, 'attachments'))) return new Response('yasak', { status: 403 })
+    // Kitap PDF'leri: bayt aralığıyla (büyük dosya belleğe alınmadan sayfa sayfa okunur)
+    if (full.startsWith(join(root, 'attachments', 'books'))) {
+      if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: books.CORS })
+      try {
+        return books.rangeResponse(full, req.headers.get('range'), 'application/pdf')
+      } catch {
+        return new Response('bulunamadı', { status: 404, headers: books.CORS })
+      }
+    }
     return net.fetch(pathToFileURL(full).toString())
   })
   createWindow()

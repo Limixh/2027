@@ -130,6 +130,8 @@ export interface MistakeNote {
   nextReview?: string
   /** Telefondan yüklendiyse true (henüz incelenmedi) */
   inbox?: boolean
+  /** Kitaptan alındıysa: hangi kitap, sayfa ve soru */
+  bookRef?: { bookId: string; page: number; question?: number }
   /** Doğru cevap (ör. 'C' ya da sayısal cevap) */
   correctAnswer?: string
   /** Öğrencinin işaretlediği cevap */
@@ -144,6 +146,25 @@ export interface MistakeNote {
   comments?: { id: string; date: string; text: string }[]
   /** Bu soruyla ilişkili beceriler (İkinci Beyin) */
   skillIds?: string[]
+}
+
+/** Kitaplıktaki soru bankası PDF'i */
+export interface Book {
+  id: string
+  title: string
+  publisher?: string
+  subjectId?: string
+  /** userData'ya göre göreli yol (attachments/books/x.pdf) */
+  rel: string
+  fileName: string
+  size: number
+  /** PDF sayfa sayısı (ilk açılışta öğrenilir) */
+  pages?: number
+  /** PDF sayfası = kitap sayfası + pageOffset */
+  pageOffset: number
+  /** Son kullanılan kitap sayfası (kolaylık) */
+  lastPage?: number
+  createdAt: string
 }
 
 /** Tahtaya yazılan tek satır */
@@ -370,6 +391,8 @@ export interface AppData {
   plans: Record<string, DailyPlan>
   practiceSets: PracticeSet[]
   skills: Skill[]
+  /** Kitaplık: soru bankası PDF'leri */
+  books?: Book[]
   /** İkinci Beyin bakım bilgisi */
   brainMeta?: {
     lastConsolidatedAt?: string
@@ -502,6 +525,11 @@ export interface DesktopApi {
     onEvent(cb: (ev: AiStreamEvent) => void): () => void
   }
   openExternal(url: string): Promise<void>
+  books?: {
+    /** PDF seçtirip kitaplığa kopyalar */
+    import(): Promise<{ rel: string; fileName: string; size: number }[]>
+    remove(rel: string): Promise<void>
+  }
   phone: {
     start(catalogJson: string): Promise<PhoneServerInfo>
     stop(): Promise<PhoneServerInfo>

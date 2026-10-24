@@ -31,6 +31,10 @@ const api: DesktopApi = {
     }
   },
   openExternal: (url: string) => ipcRenderer.invoke('shell:open', url),
+  books: {
+    import: () => ipcRenderer.invoke('books:import'),
+    remove: (rel: string) => ipcRenderer.invoke('books:remove', rel)
+  },
   phone: {
     start: (catalogJson: string) => ipcRenderer.invoke('phone:start', catalogJson),
     stop: () => ipcRenderer.invoke('phone:stop'),

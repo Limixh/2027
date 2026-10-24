@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Check, Trash2 } from 'lucide-react'
+import { BookOpen, Check, Trash2 } from 'lucide-react'
+import { QuestionPicker } from '@/components/books/QuestionPicker'
 import type { ChatAttachment, MistakeKind, MistakeNote } from '../../../../shared/types'
 import { Button, Field, Input, Modal, Select, Textarea, cn, confirm, toast } from '@/components/ui'
 import { SUBJECTS, SUBJECT_MAP } from '@/data/curriculum'
@@ -57,6 +58,8 @@ export function MistakeModal({
   const [qImgs, setQImgs] = useState<ChatAttachment[]>(note?.questionImages ?? [])
   const [aImgs, setAImgs] = useState<ChatAttachment[]>(note?.attemptImages ?? [])
   const [pasteTo, setPasteTo] = useState<'q' | 'a'>('q')
+  const [bookRef, setBookRef] = useState(note?.bookRef)
+  const [picker, setPicker] = useState(false)
   const hasImg = qImgs.length > 0 || aImgs.length > 0
 
   const save = (): void => {
@@ -77,7 +80,8 @@ export function MistakeModal({
       usedHint: help === 'hint' || undefined,
       hintSeen: help === 'hint' ? hintSeen.trim() || undefined : undefined,
       questionImages: qImgs.length ? qImgs : undefined,
-      attemptImages: aImgs.length ? aImgs : undefined
+      attemptImages: aImgs.length ? aImgs : undefined,
+      bookRef
     }
     if (note) {
       update(note.id, { ...payload, inbox: false })
@@ -131,6 +135,26 @@ export function MistakeModal({
           pasteActive={pasteTo === 'q'}
           onActivate={() => setPasteTo('q')}
         />
+        <div className="-mt-2 flex justify-end">
+          <Button variant="ghost" size="sm" icon={<BookOpen size={13} />} onClick={() => setPicker(true)} title="Kitaplarım’daki PDF’ten sayfa ve soru numarasıyla al">
+            Kitaptan al
+          </Button>
+        </div>
+        {picker && (
+          <QuestionPicker
+            mode="single"
+            onClose={() => setPicker(false)}
+            onPick={(r) => {
+              setQImgs((v) => [...v, r.att])
+              setBookRef(r.bookRef)
+              if (!source.trim()) setSource(r.source)
+              if (r.subjectId && r.subjectId !== subjectId) {
+                setSubjectId(r.subjectId)
+                setTopicId('')
+              }
+            }}
+          />
+        )}
         <ImagePicker
           label="Benim çözümüm (işlemli hali, isteğe bağlı)"
           hint="Çözemediğin sorudaki karalamanı silmeden ekle; AI hatanı satır satır bulur."

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type PageId = 'dashboard' | 'study' | 'exams' | 'topics' | 'analysis' | 'mistakes' | 'ai' | 'settings' | 'focus' | 'room' | 'practice' | 'brain'
+export type PageId = 'dashboard' | 'study' | 'exams' | 'topics' | 'analysis' | 'mistakes' | 'ai' | 'settings' | 'focus' | 'room' | 'practice' | 'brain' | 'books'
 
 interface NavState {
   page: PageId
