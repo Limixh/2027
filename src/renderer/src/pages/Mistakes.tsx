@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ClipboardList, Inbox, Plus, Play, Search, Smartphone, X } from 'lucide-react'
 import type { MistakeNote } from '../../../shared/types'
 import { Button, Card, EmptyState, Input, PageHeader, Segmented, Select, cn, confirm, toast } from '@/components/ui'
@@ -78,18 +78,58 @@ export default function Mistakes(): React.JSX.Element {
 
   const filtering = subjectFilter !== 'all' || kindFilter !== 'all' || status !== 'all' || search.trim() !== ''
 
-  const onOpen = useCallback((n: MistakeNote) => setDetailId(n.id), [])
+  // Listeye dönünce kaldığı yere kaydır
+  const listScroll = useRef(0)
+  const onOpen = useCallback((n: MistakeNote) => {
+    listScroll.current = document.querySelector('main')?.scrollTop ?? 0
+    setDetailId(n.id)
+  }, [])
   const onEdit = useCallback((n: MistakeNote) => setModal({ note: n }), [])
   const onDelete = useCallback(
     async (n: MistakeNote) => {
       if (await confirm({ title: 'Bu not silinsin mi?', message: 'Hata defterinden kalıcı olarak silinecek.' })) {
+        // Sayfadaysa silinen yerine sıradaki soruyu aç
+        const i = filtered.findIndex((x) => x.id === n.id)
+        const after = filtered[i + 1] ?? filtered[i - 1]
         remove(n.id)
-        setDetailId((d) => (d === n.id ? null : d))
+        setDetailId((d) => (d === n.id ? (after?.id ?? null) : d))
         toast('Not silindi', 'info')
       }
     },
-    [remove]
+    [remove, filtered]
   )
+
+  // Açık soru sayfası: süzülmüş listede önceki / sonraki
+  const detailNav = useMemo(() => {
+    const i = filtered.findIndex((n) => n.id === detailId)
+    if (i < 0) return undefined
+    return {
+      position: i + 1,
+      total: filtered.length,
+      prev: i > 0 ? () => setDetailId(filtered[i - 1].id) : undefined,
+      next: i < filtered.length - 1 ? () => setDetailId(filtered[i + 1].id) : undefined
+    }
+  }, [filtered, detailId])
+  const closeDetail = useCallback(() => setDetailId(null), [])
+
+  // Soru sayfası açılınca / soru değişince en üste, listeye dönünce eski yere kaydır
+  useEffect(() => {
+    const main = document.querySelector('main')
+    if (detailId) main?.scrollTo({ top: 0 })
+    else if (listScroll.current) {
+      main?.scrollTo({ top: listScroll.current })
+      listScroll.current = 0
+    }
+  }, [detailId])
+
+  if (detailId && !reviewIds) {
+    return (
+      <div>
+        <NoteDetail key={detailId} id={detailId} page nav={detailNav} onClose={closeDetail} onEdit={onEdit} onDelete={(x) => void onDelete(x)} />
+        {modal && <MistakeModal note={modal.note} draft={modal.draft} onClose={() => setModal(null)} />}
+      </div>
+    )
+  }
 
   const newBtn = (
     <Button variant="primary" icon={<Plus size={15} />} onClick={() => setModal({})}>
@@ -252,9 +292,6 @@ export default function Mistakes(): React.JSX.Element {
         </>
       )}
 
-      {detailId && !modal && !reviewIds && (
-        <NoteDetail id={detailId} onClose={() => setDetailId(null)} onEdit={onEdit} onDelete={(x) => void onDelete(x)} />
-      )}
       {modal && <MistakeModal note={modal.note} draft={modal.draft} onClose={() => setModal(null)} />}
       {reviewIds && <ReviewMode ids={reviewIds} onClose={() => setReviewIds(null)} />}
       <PhoneUploadModal open={phone} onClose={() => setPhone(false)} />

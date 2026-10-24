@@ -1,8 +1,8 @@
 {
-  "version": "1.7.1",
-  "file": "app-1.7.1.json.gz",
-  "sha256": "ea9df450a12a63c921d98a8323eb57bb30cb8a024dc369b67fbf4a16c8039ddb",
+  "version": "1.7.2",
+  "file": "app-1.7.2.json.gz",
+  "sha256": "6d426f202430c8fcd2af3e71e488a354702b99c807836a555caa3bcc85d515e4",
   "minShell": "1.1.0",
-  "notes": "Analize soru sorabilirsin (şurayı tekrar anlat); Hafızayı düzenle düğmesi daha görünür",
+  "notes": "Hata Defteri'nde sorular artık açılır pencere yerine geniş sayfada açılıyor",
   "date": "2026-10-24"
 }

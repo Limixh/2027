@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Check, Eye, EyeOff, Pencil, RefreshCw, RotateCcw, Sparkles, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Eye, EyeOff, Pencil, RefreshCw, RotateCcw, Sparkles, Trash2, X } from 'lucide-react'
 import type { MistakeKind, MistakeNote } from '../../../../shared/types'
 import { Badge, Button, Modal, Select, Textarea, cn, toast } from '@/components/ui'
 import { SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
@@ -42,16 +42,99 @@ function Section({ title, right, children }: { title: string; right?: React.Reac
   )
 }
 
+/** Önceki / sonraki soru (sayfa görünümünde) */
+export interface NoteNav {
+  position: number
+  total: number
+  prev?: () => void
+  next?: () => void
+}
+
+/** Detayın çerçevesi: açılır pencere ya da tam sayfa (Hata Defteri) */
+function Shell({
+  page,
+  onClose,
+  title,
+  subtitle,
+  actions,
+  nav,
+  children
+}: {
+  page: boolean
+  onClose: () => void
+  title: React.ReactNode
+  subtitle?: React.ReactNode
+  actions: React.ReactNode
+  nav?: NoteNav
+  children: React.ReactNode
+}): React.JSX.Element {
+  // Sayfada: Esc geri döner, ← → önceki / sonraki (yazı yazarken ya da açık pencere varken değil)
+  useEffect(() => {
+    if (!page) return
+    const onKey = (e: KeyboardEvent): void => {
+      const t = e.target instanceof Element ? e.target : null
+      if (document.querySelector('[role=dialog]') || t?.closest('input, textarea, select, [contenteditable]')) return
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft' && nav?.prev) nav.prev()
+      else if (e.key === 'ArrowRight' && nav?.next) nav.next()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [page, onClose, nav])
+
+  if (!page)
+    return (
+      <Modal open onClose={onClose} title={title} subtitle={subtitle} width={860} footer={actions}>
+        {children}
+      </Modal>
+    )
+  return (
+    <div className="animate-fade-in">
+      <div className="sticky top-10 z-20 -mx-8 mb-6 border-b border-border bg-bg/90 px-8 pb-3 pt-1 backdrop-blur">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <Button variant="ghost" size="sm" icon={<ArrowLeft size={15} />} onClick={onClose} title="Esc">
+            Hata Defteri
+          </Button>
+          {nav && nav.total > 1 && (
+            <div className="flex items-center gap-1 text-xs text-muted">
+              <Button variant="ghost" size="icon" disabled={!nav.prev} onClick={nav.prev} aria-label="Önceki soru" title="Önceki (←)">
+                <ChevronLeft size={16} />
+              </Button>
+              <span className="tabular min-w-[48px] text-center">
+                {nav.position} / {nav.total}
+              </span>
+              <Button variant="ghost" size="icon" disabled={!nav.next} onClick={nav.next} aria-label="Sonraki soru" title="Sonraki (→)">
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          )}
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold leading-tight tracking-tight">{title}</h1>
+            {subtitle && <div className="mt-0.5 text-xs text-muted">{subtitle}</div>}
+          </div>
+          <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>
+        </div>
+      </div>
+      {children}
+    </div>
+  )
+}
+
 export function NoteDetail({
   id,
   onClose,
   onEdit,
-  onDelete
+  onDelete,
+  page = false,
+  nav
 }: {
   id: string
   onClose: () => void
   onEdit: (n: MistakeNote) => void
   onDelete: (n: MistakeNote) => void
+  /** Açılır pencere yerine geniş sayfa olarak göster */
+  page?: boolean
+  nav?: NoteNav
 }): React.JSX.Element | null {
   const note = useStore((s) => s.data.mistakeNotes.find((m) => m.id === id))
   const allSkills = useStore((s) => s.data.skills)
@@ -148,15 +231,14 @@ export function NoteDetail({
   /* ---------- tekrar çözme: yalnızca soru görseli ---------- */
   if (retry) {
     return (
-      <Modal
-        open
+      <Shell
+        page={page}
         onClose={onClose}
         title="Tekrar çöz"
         subtitle={[subject?.name, topic?.name].filter(Boolean).join(' · ')}
-        width={820}
-        footer={
+        actions={
           <>
-            <Button variant="ghost" className="mr-auto" onClick={() => setRetry(false)}>
+            <Button variant="ghost" className={cn(!page && 'mr-auto')} onClick={() => setRetry(false)}>
               Vazgeç
             </Button>
             <Button variant="outline" icon={<X size={14} />} onClick={() => answer(false)}>
@@ -171,10 +253,16 @@ export function NoteDetail({
           </>
         }
       >
-        <div className="space-y-4">
+        <div className={cn('space-y-4', page && 'mx-auto max-w-4xl')}>
           {hasQ ? (
             note.questionImages!.map((a, i) => (
-              <NoteImage key={a.rel + i} att={a} zoom className="rounded-lg border border-border bg-surface-2" imgClassName="mx-auto max-h-[56vh] w-auto max-w-full" />
+              <NoteImage
+                key={a.rel + i}
+                att={a}
+                zoom
+                className="rounded-lg border border-border bg-surface-2"
+                imgClassName={cn('mx-auto w-auto max-w-full', page ? 'max-h-[68vh]' : 'max-h-[56vh]')}
+              />
             ))
           ) : (
             <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{note.text}</p>
@@ -187,17 +275,128 @@ export function NoteDetail({
             placeholder="Yorum (isteğe bağlı): bu sefer nerede takıldın / ne fark ettin?"
           />
         </div>
-      </Modal>
+      </Shell>
     )
   }
 
   const retries = [...(note.retries ?? [])].reverse()
   const sims = note.similar ?? []
 
+  const metaTop = (
+    <>
+      {note.inbox && (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-3.5 py-2.5 text-xs text-muted">
+          <span>Telefondan geldi. Ders ve konuyu seçip kaydedersen AI daha doğru analiz eder.</span>
+          <Button size="sm" variant="outline" onClick={() => onEdit(note)}>
+            Tamamla
+          </Button>
+        </div>
+      )}
+
+      {linkedSkills.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs text-muted">Beceriler:</span>
+          {linkedSkills.map((sk) => (
+            <button
+              key={sk.id}
+              onClick={() => {
+                onClose()
+                useNav.getState().go('brain', { skill: sk.id })
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs text-text transition hover:bg-surface-2"
+              title={`${STATUS_LABEL[sk.st.status]} · ${sk.topicIds.length} konuda`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_COLOR[sk.st.status] }} />
+              {sk.name}
+              {sk.topicIds.length > 1 && <span className="text-muted">· {sk.topicIds.length} konu</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {(note.correctAnswer || note.myAnswer || note.usedSolution || note.usedHint) && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+          {note.correctAnswer && (
+            <span className="text-muted">
+              Doğru cevap: <b className="text-success">{note.correctAnswer}</b>
+            </span>
+          )}
+          {note.myAnswer && (
+            <span className="text-muted">
+              Benim cevabım: <b className={note.myAnswer === note.correctAnswer ? 'text-success' : 'text-danger'}>{note.myAnswer}</b>
+            </span>
+          )}
+          {note.usedSolution && <span className="text-[#4f9a95]">Çözüme bakarak yaptım</span>}
+          {note.usedHint && !note.usedSolution && (
+            <span className="text-[#4f9a95]">İpucuna baktım, gerisi benim{note.hintSeen ? `: “${note.hintSeen}”` : ''}</span>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
+        <Select
+          value={note.kind}
+          onChange={(e) => update(id, { kind: e.target.value as MistakeKind })}
+          className="!h-7 !w-auto !py-0 text-xs"
+          aria-label="Hata türü"
+        >
+          {KINDS.map((k) => (
+            <option key={k} value={k}>
+              {MISTAKE_KIND_LABEL[k]}
+            </option>
+          ))}
+        </Select>
+        {note.resolved ? (
+          <Badge color="#51b896">
+            <Check size={11} strokeWidth={3} /> Öğrenildi
+          </Badge>
+        ) : note.nextReview ? (
+          <span className={cn(due && 'font-medium text-warning')}>
+            Sonraki tekrar: <span className="tabular">{due ? 'bugün' : formatDate(note.nextReview)}</span>
+          </span>
+        ) : (
+          <span>Tekrar planlanmadı</span>
+        )}
+        {retried !== null && <span>{retried ? 'Son deneme: çözdün' : 'Son deneme: çözemedin'}</span>}
+      </div>
+    </>
+  )
+
+  const questionCol = (
+    <>
+      {hasQ && (
+        <div className="space-y-3">
+          {note.questionImages!.map((a, i) => (
+            <NoteImage
+              key={a.rel + i}
+              att={a}
+              zoom
+              className="rounded-lg border border-border bg-surface-2"
+              imgClassName={cn('mx-auto w-auto max-w-full', page ? 'max-h-[72vh]' : 'max-h-[60vh]')}
+            />
+          ))}
+        </div>
+      )}
+
+      {note.text.trim() && <p className="whitespace-pre-wrap text-sm leading-relaxed text-text">{note.text}</p>}
+
+      {(note.attemptImages?.length ?? 0) > 0 && (
+        <Section title="Benim çözümüm">
+          <div className="grid grid-cols-2 gap-3">
+            {note.attemptImages!.map((a, i) => (
+              <NoteImage key={a.rel + i} att={a} zoom className="rounded-lg border border-border bg-surface-2" imgClassName="mx-auto max-h-72 w-auto max-w-full" />
+            ))}
+          </div>
+        </Section>
+      )}
+    </>
+  )
+
   return (
-    <Modal
-      open
+    <Shell
+      page={page}
       onClose={onClose}
+      nav={nav}
       title={topic?.name ?? subject?.name ?? 'Ders seçilmedi'}
       subtitle={
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -206,10 +405,14 @@ export function NoteDetail({
           {note.source && <span>· {note.source}</span>}
         </span>
       }
-      width={860}
-      footer={
+      actions={
         <>
-          <Button variant="ghost" className="mr-auto text-danger hover:bg-danger/10" icon={<Trash2 size={14} />} onClick={() => onDelete(note)}>
+          <Button
+            variant="ghost"
+            className={cn('text-danger hover:bg-danger/10', !page && 'mr-auto')}
+            icon={<Trash2 size={14} />}
+            onClick={() => onDelete(note)}
+          >
             Sil
           </Button>
           <Button variant="ghost" icon={<Pencil size={14} />} onClick={() => onEdit(note)}>
@@ -231,103 +434,7 @@ export function NoteDetail({
         </>
       }
     >
-      <div className="space-y-5">
-        {note.inbox && (
-          <div className="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-3.5 py-2.5 text-xs text-muted">
-            <span>Telefondan geldi. Ders ve konuyu seçip kaydedersen AI daha doğru analiz eder.</span>
-            <Button size="sm" variant="outline" onClick={() => onEdit(note)}>
-              Tamamla
-            </Button>
-          </div>
-        )}
-
-        {linkedSkills.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs text-muted">Beceriler:</span>
-            {linkedSkills.map((sk) => (
-              <button
-                key={sk.id}
-                onClick={() => {
-                  onClose()
-                  useNav.getState().go('brain', { skill: sk.id })
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs text-text transition hover:bg-surface-2"
-                title={`${STATUS_LABEL[sk.st.status]} · ${sk.topicIds.length} konuda`}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_COLOR[sk.st.status] }} />
-                {sk.name}
-                {sk.topicIds.length > 1 && <span className="text-muted">· {sk.topicIds.length} konu</span>}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {(note.correctAnswer || note.myAnswer || note.usedSolution || note.usedHint) && (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
-            {note.correctAnswer && (
-              <span className="text-muted">
-                Doğru cevap: <b className="text-success">{note.correctAnswer}</b>
-              </span>
-            )}
-            {note.myAnswer && (
-              <span className="text-muted">
-                Benim cevabım: <b className={note.myAnswer === note.correctAnswer ? 'text-success' : 'text-danger'}>{note.myAnswer}</b>
-              </span>
-            )}
-            {note.usedSolution && <span className="text-[#4f9a95]">Çözüme bakarak yaptım</span>}
-            {note.usedHint && !note.usedSolution && (
-              <span className="text-[#4f9a95]">İpucuna baktım, gerisi benim{note.hintSeen ? `: “${note.hintSeen}”` : ''}</span>
-            )}
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
-          <Select
-            value={note.kind}
-            onChange={(e) => update(id, { kind: e.target.value as MistakeKind })}
-            className="!h-7 !w-auto !py-0 text-xs"
-            aria-label="Hata türü"
-          >
-            {KINDS.map((k) => (
-              <option key={k} value={k}>
-                {MISTAKE_KIND_LABEL[k]}
-              </option>
-            ))}
-          </Select>
-          {note.resolved ? (
-            <Badge color="#51b896">
-              <Check size={11} strokeWidth={3} /> Öğrenildi
-            </Badge>
-          ) : note.nextReview ? (
-            <span className={cn(due && 'font-medium text-warning')}>
-              Sonraki tekrar: <span className="tabular">{due ? 'bugün' : formatDate(note.nextReview)}</span>
-            </span>
-          ) : (
-            <span>Tekrar planlanmadı</span>
-          )}
-          {retried !== null && <span>{retried ? 'Son deneme: çözdün' : 'Son deneme: çözemedin'}</span>}
-        </div>
-
-        {hasQ && (
-          <div className="space-y-3">
-            {note.questionImages!.map((a, i) => (
-              <NoteImage key={a.rel + i} att={a} zoom className="rounded-lg border border-border bg-surface-2" imgClassName="mx-auto max-h-[60vh] w-auto max-w-full" />
-            ))}
-          </div>
-        )}
-
-        {note.text.trim() && <p className="whitespace-pre-wrap text-sm leading-relaxed text-text">{note.text}</p>}
-
-        {(note.attemptImages?.length ?? 0) > 0 && (
-          <Section title="Benim çözümüm">
-            <div className="grid grid-cols-2 gap-3">
-              {note.attemptImages!.map((a, i) => (
-                <NoteImage key={a.rel + i} att={a} zoom className="rounded-lg border border-border bg-surface-2" imgClassName="mx-auto max-h-72 w-auto max-w-full" />
-              ))}
-            </div>
-          </Section>
-        )}
-
+      <Body page={page} metaTop={metaTop} questionCol={questionCol}>
         <Section title="Yorumlarım">
           {note.comments?.length ? (
             <ul className="mb-3 space-y-2">
@@ -514,7 +621,40 @@ export function NoteDetail({
             </ul>
           )}
         </Section>
+      </Body>
+    </Shell>
+  )
+}
+
+/**
+ * Pencerede her şey alt alta; sayfada solda soru (kaydırırken sabit kalır), sağda analiz ve diğerleri.
+ */
+function Body({
+  page,
+  metaTop,
+  questionCol,
+  children
+}: {
+  page: boolean
+  metaTop: React.ReactNode
+  questionCol: React.ReactNode
+  children: React.ReactNode
+}): React.JSX.Element {
+  if (!page)
+    return (
+      <div className="space-y-5">
+        {metaTop}
+        {questionCol}
+        {children}
       </div>
-    </Modal>
+    )
+  return (
+    <div className="grid gap-10 pb-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+      <div className="space-y-5 self-start lg:sticky lg:top-[7.5rem] lg:max-h-[calc(100vh-8.5rem)] lg:overflow-y-auto lg:pr-2">{questionCol}</div>
+      <div className="min-w-0 space-y-5">
+        {metaTop}
+        {children}
+      </div>
+    </div>
   )
 }
