@@ -1,8 +1,8 @@
 {
-  "version": "1.7.2",
-  "file": "app-1.7.2.json.gz",
-  "sha256": "6d426f202430c8fcd2af3e71e488a354702b99c807836a555caa3bcc85d515e4",
+  "version": "1.7.3",
+  "file": "app-1.7.3.json.gz",
+  "sha256": "aaef69a692bb8e95212b2cbb5ffaca89ec6180fcbc86e860c62adcc2677b017e",
   "minShell": "1.1.0",
-  "notes": "Hata Defteri'nde sorular artık açılır pencere yerine geniş sayfada açılıyor",
+  "notes": "İkinci Beyin AI'ye yalnızca alakalı hafızayı gönderiyor (daha az kullanım)",
   "date": "2026-10-24"
 }

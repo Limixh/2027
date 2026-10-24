@@ -2,7 +2,7 @@
 import type { AppData } from '../../../shared/types'
 import { CURRICULUM_NOTE, SUBJECTS, SUBJECT_MAP, TOPIC_MAP, subjectsFor } from '@/data/curriculum'
 import { addDays, formatMinutes, todayKey, weekdayName } from './date'
-import { memoryForPrompt, reviewQueue } from './brain'
+import { memoryForCoach, reviewQueue } from './brain'
 import { estimateField, estimateTyt, FIELD_LABEL, fmtNet, MISTAKE_KIND_LABEL, net, placement, totalNet, totals, tytGroupNets } from './exam'
 import {
   bySubject,
@@ -201,11 +201,11 @@ export function buildContext(data: AppData): string {
   }
 
   // İkinci Beyin: konudan bağımsız beceri hafızası
-  const memory = memoryForPrompt(data, { limit: 30 })
+  const memory = memoryForCoach(data)
   if (memory) {
     push(
       '',
-      '## İkinci Beyin — beceri hafızası (en zayıftan güçlüye)',
+      '## İkinci Beyin — odaklanılacak beceriler (kök nedenler ve tekrar zamanı gelenler önce)',
       'Not: Bir konudaki sorunun kökü başka konudaki bir beceri eksikliği olabilir. Plan ve önerilerde konu yerine bu kök becerileri hedeflemeyi düşün. "dayandığı beceriler" önkoşuldur: önkoşul zayıfsa önce ona çalışılmalı.',
       memory
     )
