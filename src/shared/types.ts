@@ -67,7 +67,8 @@ export interface SubjectScore {
   blank: number
 }
 
-export type MistakeKind = 'bilgi' | 'dikkat' | 'sure' | 'yorum' | 'bos'
+/** 'cozum' = soruyu çözüme bakarak yaptım */
+export type MistakeKind = 'bilgi' | 'dikkat' | 'sure' | 'yorum' | 'bos' | 'cozum'
 
 export interface ExamMistake {
   id: string
@@ -117,12 +118,18 @@ export interface MistakeNote {
   aiAnalyzedAt?: string
   /** AI'nin ürettiği benzer soru setleri (Markdown; cevaplar '---CEVAPLAR---' satırından sonra) */
   similar?: { id: string; markdown: string; createdAt: string }[]
-  /** Tekrar çözme geçmişi */
-  retries?: { date: string; solved: boolean }[]
+  /** Tekrar çözme geçmişi (help: çözüme bakarak çözdü) */
+  retries?: { date: string; solved: boolean; help?: boolean }[]
   /** Bir sonraki tekrar tarihi (YYYY-MM-DD); yoksa tekrar planlanmamış */
   nextReview?: string
   /** Telefondan yüklendiyse true (henüz incelenmedi) */
   inbox?: boolean
+  /** Doğru cevap (ör. 'C' ya da sayısal cevap) */
+  correctAnswer?: string
+  /** Öğrencinin işaretlediği cevap */
+  myAnswer?: string
+  /** Soruyu çözüme bakarak yaptı */
+  usedSolution?: boolean
 }
 
 /** Soru pratiği seti: ör. 20 paragraf 28 dk, 17D 2Y 1B */
@@ -139,10 +146,12 @@ export interface PracticeSet {
   correct: number
   wrong: number
   blank: number
+  /** Çözüme bakarak yapılan soru sayısı (doğru sayılmaz) */
+  helped?: number
   /** Canlı modda ölçülen soru başına süreler (saniye) */
   perQuestion?: number[]
   /** Canlı modda soru başına sonuç */
-  perResult?: ('D' | 'Y' | 'B')[]
+  perResult?: ('D' | 'Y' | 'B' | 'C')[]
   source?: string
   note?: string
   /** Otomatik oluşturulan çalışma kaydı */
@@ -326,6 +335,9 @@ export interface UpdateStatus {
 /** Telefondan gelen soru yüklemesi */
 export interface PhoneUpload {
   subjectId: string
+  correctAnswer?: string
+  myAnswer?: string
+  usedSolution?: boolean
   topicId?: string
   note: string
   source?: string

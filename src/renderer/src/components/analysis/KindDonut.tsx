@@ -46,6 +46,14 @@ export const KIND_ADVICE: Record<MistakeKind, { title: string; tips: string[] }>
       '1-2 şıkkı eleyebiliyorsan işaretlemek çoğu zaman net kazandırır (4 yanlış 1 doğruyu götürür).',
       'Bilmediğin konuları öncelik listesine ekleyip kısa tekrar yap.'
     ]
+  },
+  cozum: {
+    title: 'Sorular çözüme bakarak yapılıyor',
+    tips: [
+      'Çözüme baktığın soruyu 1-2 gün sonra çözüme bakmadan yeniden çöz; Hata Defteri bunu otomatik planlar.',
+      'Çözümü okuduktan sonra kapatıp kendi cümlelerinle adımları yaz; sadece okumak kalıcı olmaz.',
+      'Aynı konudan 5-10 benzer soru çöz (AI ile benzer soru üretebilirsin).'
+    ]
   }
 }
 

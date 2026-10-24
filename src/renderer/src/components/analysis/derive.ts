@@ -31,7 +31,7 @@ export function filterData(data: AppData, type: TypeFilter, period: Period): App
 }
 
 export function kindTotals(exams: ExamResult[]): Record<MistakeKind, number> {
-  const t: Record<MistakeKind, number> = { bilgi: 0, dikkat: 0, sure: 0, yorum: 0, bos: 0 }
+  const t: Record<MistakeKind, number> = { bilgi: 0, dikkat: 0, sure: 0, yorum: 0, bos: 0, cozum: 0 }
   for (const e of exams) for (const m of e.mistakes ?? []) t[m.kind] = (t[m.kind] ?? 0) + m.count
   return t
 }

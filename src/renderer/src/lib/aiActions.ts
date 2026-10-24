@@ -120,7 +120,7 @@ export function resolveTopic(subjectId: string | undefined, name: string | undef
 }
 
 const KINDS: PlanTaskKind[] = ['konu', 'soru', 'tekrar', 'deneme', 'diger']
-const MISTAKE_KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos']
+const MISTAKE_KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos', 'cozum']
 const validDate = (d?: string): d is string => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d)
 const num = (n: unknown): number | undefined => (typeof n === 'number' && n > 0 ? Math.round(n) : undefined)
 

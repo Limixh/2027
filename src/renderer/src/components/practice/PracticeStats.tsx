@@ -57,8 +57,9 @@ export function PracticeStats({ sets }: { sets: PracticeSet[] }): React.JSX.Elem
     const avg = rc ? recent.reduce((a, s) => a + s.seconds, 0) / rc : 0
     const count = sets.reduce((a, s) => a + s.count, 0)
     const correct = sets.reduce((a, s) => a + s.correct, 0)
+    const helped = sets.reduce((a, s) => a + (s.helped ?? 0), 0)
     const best = sets.filter((s) => s.count >= 5).reduce<number>((m, s) => Math.min(m, s.seconds / s.count), Infinity)
-    return { todayCount, week, avg, acc: count ? (correct / count) * 100 : 0, count, best: Number.isFinite(best) ? best : 0 }
+    return { todayCount, week, avg, acc: count ? (correct / count) * 100 : 0, helpedPct: count ? (helped / count) * 100 : 0, helped, count, best: Number.isFinite(best) ? best : 0 }
   }, [sets, days, today, weekStart])
 
   const chartDays = useMemo(() => {
@@ -83,7 +84,7 @@ export function PracticeStats({ sets }: { sets: PracticeSet[] }): React.JSX.Elem
           value={k.avg ? fmtDur(k.avg) : '—'}
           sub={k.avg ? `son 7 set · hedef ${fmtDur(target)}` : undefined}
         />
-        <Kpi label="Doğruluk" value={k.count ? `%${fmtNum(k.acc, 0)}` : '—'} sub={`${k.count} soru`} />
+        <Kpi label="Doğruluk" value={k.count ? `%${fmtNum(k.acc, 0)}` : '—'} sub={k.helped ? `${k.count} soru · çözüme bakarak %${fmtNum(k.helpedPct, 0)}` : `${k.count} soru`} />
         <Kpi label="En hızlı ortalama" value={k.best ? fmtDur(k.best) : '—'} sub="tek set" />
       </div>
 
@@ -126,9 +127,9 @@ export function PracticeStats({ sets }: { sets: PracticeSet[] }): React.JSX.Elem
             title="Günlük soru sayısı"
             right={
               <span className="flex gap-3 text-xs text-muted">
-                {(['D', 'Y', 'B'] as const).map((r) => (
+                {(['D', 'Y', 'C', 'B'] as const).map((r) => (
                   <span key={r}>
-                    <span style={{ color: RES_COLOR[r] }}>●</span> {r}
+                    <span style={{ color: RES_COLOR[r] }}>●</span> {r === 'C' ? 'Ç' : r}
                   </span>
                 ))}
               </span>
@@ -142,10 +143,11 @@ export function PracticeStats({ sets }: { sets: PracticeSet[] }): React.JSX.Elem
                   <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip
                     cursor={{ fill: 'rgb(var(--surface-2))', opacity: 0.6 }}
-                    content={<Tip render={(d) => `${d.correct}D ${d.wrong}Y ${d.blank}B · ${d.count} soru`} />}
+                    content={<Tip render={(d) => `${d.correct}D ${d.wrong}Y ${d.blank}B${Number(d.helped) ? ` · ${d.helped} Ç` : ''} · ${d.count} soru`} />}
                   />
                   <Bar dataKey="correct" stackId="a" fill={RES_COLOR.D} fillOpacity={0.85} maxBarSize={26} animationDuration={300} />
                   <Bar dataKey="wrong" stackId="a" fill={RES_COLOR.Y} fillOpacity={0.85} maxBarSize={26} animationDuration={300} />
+                  <Bar dataKey="helped" stackId="a" fill={RES_COLOR.C} fillOpacity={0.85} maxBarSize={26} animationDuration={300} />
                   <Bar dataKey="blank" stackId="a" fill={RES_COLOR.B} fillOpacity={0.6} radius={[3, 3, 0, 0]} maxBarSize={26} animationDuration={300} />
                 </BarChart>
               </ResponsiveContainer>

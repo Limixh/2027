@@ -120,7 +120,8 @@ export const MISTAKE_KIND_LABEL: Record<string, string> = {
   dikkat: 'Dikkat hatası',
   sure: 'Süre yetmedi',
   yorum: 'Yorum/Soru kökü',
-  bos: 'Boş bıraktım'
+  bos: 'Boş bıraktım',
+  cozum: 'Çözüme bakarak yaptım'
 }
 
 export const MISTAKE_KIND_COLOR: Record<string, string> = {
@@ -128,5 +129,6 @@ export const MISTAKE_KIND_COLOR: Record<string, string> = {
   dikkat: '#bd934c',
   sure: '#4e99bb',
   yorum: '#9a6bc7',
-  bos: '#7b838f'
+  bos: '#7b838f',
+  cozum: '#4f9a95'
 }

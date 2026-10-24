@@ -14,6 +14,7 @@ export interface PracticeValues {
   correct: number
   wrong: number
   blank: number
+  helped?: number
   source?: string
   note?: string
 }
@@ -28,6 +29,7 @@ interface FormState {
   correct: number
   wrong: number
   blank: number
+  helped: number
   blankTouched: boolean
   source: string
   note: string
@@ -46,6 +48,7 @@ export function initialValues(last?: { subjectId?: string; topicId?: string; sou
     correct: 0,
     wrong: 0,
     blank: 0,
+    helped: 0,
     blankTouched: false,
     source: last?.source ?? '',
     note: ''
@@ -63,6 +66,7 @@ export function fromPractice(p: PracticeValues): FormState {
     correct: p.correct,
     wrong: p.wrong,
     blank: p.blank,
+    helped: p.helped ?? 0,
     blankTouched: true,
     source: p.source ?? '',
     note: p.note ?? ''
@@ -87,20 +91,20 @@ export function PracticeForm({
   const set = (p: Partial<FormState>): void => setF((x) => ({ ...x, ...p }))
 
   const seconds = f.min * 60 + f.sec
-  const autoBlank = Math.max(0, f.count - f.correct - f.wrong)
+  const autoBlank = Math.max(0, f.count - f.correct - f.wrong - f.helped)
   const blank = f.blankTouched ? f.blank : autoBlank
-  const sum = f.correct + f.wrong + blank
+  const sum = f.correct + f.wrong + blank + f.helped
 
   const error = useMemo(() => {
     if (f.count <= 0) return 'Soru sayısı gir'
     if (seconds <= 0) return 'Süre gir'
-    if (sum !== f.count) return `D + Y + B (${sum}) soru sayısına (${f.count}) eşit olmalı`
+    if (sum !== f.count) return `D + Y + B + Ç (${sum}) soru sayısına (${f.count}) eşit olmalı`
     return null
   }, [f.count, seconds, sum])
 
   const preview =
     f.count > 0 && seconds > 0
-      ? `≈ ${fmtDur(seconds / f.count)} / soru · %${fmtNum((f.correct / f.count) * 100, 0)} doğru · net ${fmtNum(netOf(f.correct, f.wrong), 2)}`
+      ? `≈ ${fmtDur(seconds / f.count)} / soru · %${fmtNum((f.correct / f.count) * 100, 0)} doğru · net ${fmtNum(netOf(f.correct, f.wrong), 2)}${f.helped > 0 ? ` · ${f.helped} çözüme bakarak` : ''}`
       : 'Soru sayısı ve süreyi girince özet burada görünür'
 
   const submit = (): void => {
@@ -114,6 +118,7 @@ export function PracticeForm({
       correct: f.correct,
       wrong: f.wrong,
       blank,
+      helped: f.helped > 0 ? f.helped : undefined,
       source: f.source.trim() || undefined,
       note: f.note.trim() || undefined
     })
@@ -127,7 +132,7 @@ export function PracticeForm({
         submit()
       }}
       className="space-y-4"
-    >
+  >
       <div className={inline ? 'grid grid-cols-2 gap-3 lg:grid-cols-12' : 'grid grid-cols-2 gap-3'}>
         <Field label="Ders" className={inline ? 'col-span-1 lg:col-span-3' : 'col-span-1'}>
           <SubjectSelect
@@ -147,24 +152,27 @@ export function PracticeForm({
         </Field>
       </div>
 
-      <div className={inline ? 'grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-12' : 'grid grid-cols-3 gap-3'}>
-        <Field label="Soru" className={inline ? 'lg:col-span-2' : ''}>
+      <div className={inline ? 'grid grid-cols-4 gap-3 sm:grid-cols-7' : 'grid grid-cols-4 gap-3'}>
+        <Field label="Soru">
           <NumberInput className={numCls} value={f.count} onChange={(v) => set({ count: v })} />
         </Field>
-        <Field label="Süre (dk)" className={inline ? 'lg:col-span-2' : ''}>
+        <Field label="Süre (dk)">
           <NumberInput className={numCls} value={f.min} onChange={(v) => set({ min: v })} />
         </Field>
-        <Field label="Süre (sn)" className={inline ? 'lg:col-span-2' : ''}>
+        <Field label="Süre (sn)">
           <NumberInput className={numCls} value={f.sec} max={59} onChange={(v) => set({ sec: v })} />
         </Field>
-        <Field label="Doğru" className={inline ? 'lg:col-span-2' : ''}>
+        <Field label="Doğru">
           <NumberInput className={numCls} value={f.correct} onChange={(v) => set({ correct: v })} />
         </Field>
-        <Field label="Yanlış" className={inline ? 'lg:col-span-2' : ''}>
+        <Field label="Yanlış">
           <NumberInput className={numCls} value={f.wrong} onChange={(v) => set({ wrong: v })} />
         </Field>
-        <Field label="Boş" className={inline ? 'lg:col-span-2' : ''}>
+        <Field label="Boş">
           <NumberInput className={numCls} value={blank} onChange={(v) => set({ blank: v, blankTouched: true })} />
+        </Field>
+        <Field label="Çözüme bak.">
+          <NumberInput className={numCls} value={f.helped} onChange={(v) => set({ helped: v })} />
         </Field>
       </div>
 

@@ -146,7 +146,8 @@ interface Store {
   updatePracticeSet(id: string, patch: Partial<PracticeSet>): void
   deletePracticeSet(id: string): void
   /** Hata defterindeki soruyu tekrar çözme sonucu (aralıklı tekrar) */
-  recordRetry(noteId: string, solved: boolean): void
+  /** help: çözüme bakarak çözdü (çözüldü sayılmaz, 2 gün sonra tekrar) */
+  recordRetry(noteId: string, solved: boolean, help?: boolean): void
 
   addCountdown(c: Omit<Countdown, 'id'>): void
   deleteCountdown(id: string): void
@@ -386,16 +387,17 @@ export const useStore = create<Store>((set, get) => {
       if (set?.sessionId) get().deleteSession(set.sessionId)
       mutate((d) => ({ ...d, practiceSets: d.practiceSets.filter((x) => x.id !== id) }))
     },
-    recordRetry(noteId, solved) {
+    recordRetry(noteId, solvedArg, help) {
       const note = get().data.mistakeNotes.find((m) => m.id === noteId)
       if (!note) return
-      const retries = [...(note.retries ?? []), { date: todayKey(), solved }]
+      const solved = solvedArg && !help
+      const retries = [...(note.retries ?? []), { date: todayKey(), solved, ...(help ? { help: true } : {}) }]
       // Üst üste doğru çözüm sayısına göre aralık: 1 → 3 → 7 → 14 gün; 3 doğrudan sonra öğrenildi
       let streak = 0
       for (let i = retries.length - 1; i >= 0 && retries[i].solved; i--) streak++
       const intervals = [1, 3, 7, 14]
       const learned = streak >= 3
-      const next = learned ? undefined : addDays(todayKey(), solved ? intervals[Math.min(streak, 3)] : 1)
+      const next = learned ? undefined : addDays(todayKey(), solved ? intervals[Math.min(streak, 3)] : help ? 2 : 1)
       get().updateMistakeNote(noteId, { retries, nextReview: next, resolved: learned || note.resolved, inbox: false })
     },
 

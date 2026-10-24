@@ -8,7 +8,7 @@ import { addDays, todayKey } from '@/lib/date'
 import { useStore } from '@/lib/store'
 import { ImagePicker } from './ImagePicker'
 
-export const KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos']
+export const KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos', 'cozum']
 
 export interface MistakeDraft {
   subjectId?: string
@@ -44,6 +44,9 @@ export function MistakeModal({
   const [kind, setKind] = useState<MistakeKind>(note?.kind ?? 'bilgi')
   const [date, setDate] = useState(note?.date ?? todayKey())
   const [resolved, setResolved] = useState(note?.resolved ?? false)
+  const [correctAnswer, setCorrectAnswer] = useState(note?.correctAnswer ?? '')
+  const [myAnswer, setMyAnswer] = useState(note?.myAnswer ?? '')
+  const [usedSolution, setUsedSolution] = useState(note?.usedSolution ?? note?.kind === 'cozum')
   const [tried, setTried] = useState(false)
   const [qImgs, setQImgs] = useState<ChatAttachment[]>(note?.questionImages ?? [])
   const [aImgs, setAImgs] = useState<ChatAttachment[]>(note?.attemptImages ?? [])
@@ -80,6 +83,9 @@ export function MistakeModal({
       kind,
       date,
       resolved,
+      correctAnswer: correctAnswer.trim() || undefined,
+      myAnswer: myAnswer.trim() || undefined,
+      usedSolution: usedSolution || undefined,
       questionImages: qImgs.length ? qImgs : undefined,
       attemptImages: aImgs.length ? aImgs : undefined
     }
@@ -228,6 +234,32 @@ export function MistakeModal({
           </div>
         </div>
 
+        <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+          <Field label="Doğru cevap" hint="ör. C ya da 12">
+            <AnswerInput value={correctAnswer} onChange={setCorrectAnswer} />
+          </Field>
+          <Field label="Benim cevabım" hint="Boş bıraktıysan boş geç">
+            <AnswerInput value={myAnswer} onChange={setMyAnswer} />
+          </Field>
+          <button
+            type="button"
+            onClick={() => {
+              setUsedSolution((v) => !v)
+              if (!usedSolution) setKind('cozum')
+            }}
+            className={cn(
+              'flex h-9 w-fit items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-colors md:col-span-2',
+              usedSolution ? 'border-[#4f9a95] bg-[#4f9a95]/15 text-[#4f9a95]' : 'border-border bg-surface-2 text-muted hover:text-text'
+            )}
+            title="Bu soruyu çözüme bakarak yaptım"
+          >
+            <span className={cn('grid h-4 w-4 place-items-center rounded border', usedSolution ? 'border-[#4f9a95] bg-[#4f9a95] text-white' : 'border-subtle')}>
+              {usedSolution && '✓'}
+            </span>
+            Çözüme bakarak yaptım
+          </button>
+        </div>
+
         <Field label={hasImg ? 'Not (isteğe bağlı)' : 'Soru / hata açıklaması'} hint={tried && !text.trim() && !hasImg ? undefined : 'Soruyu veya neyi yanlış yaptığını kısaca yaz.'}>
           <Textarea
             autoFocus={!note && !hasImg}
@@ -272,5 +304,32 @@ export function MistakeModal({
         </button>
       </div>
     </Modal>
+  )
+}
+
+/** Cevap kutusu: A-E kısayolları + serbest metin (sayısal cevaplar için) */
+function AnswerInput({ value, onChange }: { value: string; onChange: (v: string) => void }): React.JSX.Element {
+  return (
+    <div className="flex items-center gap-1">
+      {['A', 'B', 'C', 'D', 'E'].map((o) => (
+        <button
+          key={o}
+          type="button"
+          onClick={() => onChange(value === o ? '' : o)}
+          className={cn(
+            'h-9 w-8 shrink-0 rounded-lg border text-xs font-semibold transition-colors',
+            value === o ? 'border-accent bg-accent text-on-accent' : 'border-border bg-surface-2 text-muted hover:text-text'
+          )}
+        >
+          {o}
+        </button>
+      ))}
+      <Input
+        value={['A', 'B', 'C', 'D', 'E'].includes(value) ? '' : value}
+        onChange={(e) => onChange(e.target.value.slice(0, 40))}
+        placeholder="diğer (ör. 12)"
+        className="w-28 min-w-0 flex-1"
+      />
+    </div>
   )
 }

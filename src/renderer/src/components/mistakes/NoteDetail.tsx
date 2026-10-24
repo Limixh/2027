@@ -88,7 +88,10 @@ export function NoteDetail({
           subject: subject?.name ?? 'YKS',
           topic: topic?.name,
           hasAttempt: (note.attemptImages?.length ?? 0) > 0,
-          note: note.text || undefined
+          note: note.text || undefined,
+          correctAnswer: note.correctAnswer,
+          myAnswer: note.myAnswer,
+          usedSolution: note.usedSolution || note.kind === 'cozum'
         }),
         attachments: imgs.length ? imgs : undefined,
         onText: setLive
@@ -137,11 +140,14 @@ export function NoteDetail({
     }
   }
 
-  const answer = (solved: boolean): void => {
-    recordRetry(id, solved)
-    setRetried(solved)
+  const answer = (solved: boolean, help = false): void => {
+    recordRetry(id, solved, help)
+    setRetried(solved && !help)
     setRetry(false)
-    toast(solved ? 'Güzel! Bir sonraki tekrar planlandı.' : 'Sorun değil, yarın tekrar karşına çıkacak.', solved ? 'success' : 'info')
+    toast(
+      help ? 'Not edildi: 2 gün sonra çözüme bakmadan tekrar dene.' : solved ? 'Güzel! Bir sonraki tekrar planlandı.' : 'Sorun değil, yarın tekrar karşına çıkacak.',
+      solved && !help ? 'success' : 'info'
+    )
   }
 
   const analysisBody = analyzing ? splitNoteMeta(live).body || live.replace(/```yks-note[\s\S]*$/, '').trim() : note.aiAnalysis
@@ -162,6 +168,9 @@ export function NoteDetail({
             </Button>
             <Button variant="outline" icon={<X size={14} />} onClick={() => answer(false)}>
               Çözemedim
+            </Button>
+            <Button variant="outline" onClick={() => answer(false, true)} title="Çözdün ama çözüme bakarak">
+              Çözüme bakarak
             </Button>
             <Button variant="primary" icon={<Check size={14} />} onClick={() => answer(true)}>
               Çözdüm
@@ -230,6 +239,22 @@ export function NoteDetail({
             <Button size="sm" variant="outline" onClick={() => onEdit(note)}>
               Tamamla
             </Button>
+          </div>
+        )}
+
+        {(note.correctAnswer || note.myAnswer || note.usedSolution) && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
+            {note.correctAnswer && (
+              <span className="text-muted">
+                Doğru cevap: <b className="text-success">{note.correctAnswer}</b>
+              </span>
+            )}
+            {note.myAnswer && (
+              <span className="text-muted">
+                Benim cevabım: <b className={note.myAnswer === note.correctAnswer ? 'text-success' : 'text-danger'}>{note.myAnswer}</b>
+              </span>
+            )}
+            {note.usedSolution && <span className="text-[#4f9a95]">Çözüme bakarak yaptım</span>}
           </div>
         )}
 
@@ -404,7 +429,7 @@ export function NoteDetail({
               {retries.map((r, i) => (
                 <li key={i} className="flex items-center justify-between py-1.5">
                   <span className="tabular text-muted">{formatDate(r.date)}</span>
-                  <span className={r.solved ? 'text-success' : 'text-warning'}>{r.solved ? 'Çözdüm' : 'Çözemedim'}</span>
+                  <span className={r.solved ? 'text-success' : 'text-warning'}>{r.solved ? 'Çözdüm' : r.help ? 'Çözüme bakarak' : 'Çözemedim'}</span>
                 </li>
               ))}
             </ul>

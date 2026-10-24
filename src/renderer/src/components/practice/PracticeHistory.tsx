@@ -5,7 +5,7 @@ import { Button } from '@/components/ui'
 import { SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
 import { relativeDay } from '@/lib/date'
 import { QuestionChart } from './QuestionChart'
-import { fmtDur } from './lib'
+import { RES_COLOR, fmtDur } from './lib'
 
 export function PracticeHistory({
   sets,
@@ -44,6 +44,7 @@ export function PracticeHistory({
                   <div className="tabular mt-0.5 truncate text-xs text-muted">
                     {s.count} soru · {s.seconds < 60 ? `${s.seconds} sn` : `${Math.round(s.seconds / 60)} dk`} · {fmtDur(s.seconds / s.count)}/soru ·{' '}
                     <span className="text-success">{s.correct}D</span> <span className="text-danger">{s.wrong}Y</span> {s.blank}B
+                    {!!s.helped && <span style={{ color: RES_COLOR.C }}> · {s.helped} Ç</span>}
                     {s.source && <span className="text-subtle"> · {s.source}</span>}
                     {s.note && <span className="text-subtle"> · {s.note}</span>}
                   </div>

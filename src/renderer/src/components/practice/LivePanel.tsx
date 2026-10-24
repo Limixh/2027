@@ -25,7 +25,8 @@ import {
 const RESULTS: { r: Res; keys: string[]; hint: string }[] = [
   { r: 'D', keys: ['d', '1'], hint: 'D' },
   { r: 'Y', keys: ['y', '2'], hint: 'Y' },
-  { r: 'B', keys: ['b', '3'], hint: 'B' }
+  { r: 'B', keys: ['b', '3'], hint: 'B' },
+  { r: 'C', keys: ['c', 'ç', '4'], hint: 'Ç' }
 ]
 
 const fmtMs = (ms: number): string => {
@@ -94,7 +95,7 @@ export function LivePanel(): React.JSX.Element {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
           <p className="text-sm text-muted">
-            Her soruyu bitirince <Kbd>D</Kbd> <Kbd>Y</Kbd> <Kbd>B</Kbd> (veya 1 / 2 / 3) tuşuna bas; süre otomatik kaydedilir. Boşluk: duraklat.
+            Her soruyu bitirince <Kbd>D</Kbd> <Kbd>Y</Kbd> <Kbd>B</Kbd> <Kbd>Ç</Kbd> (veya 1 / 2 / 3 / 4) tuşuna bas; süre otomatik kaydedilir. Boşluk: duraklat.
           </p>
           <Button
             variant="primary"
@@ -152,7 +153,7 @@ export function LivePanel(): React.JSX.Element {
               key={r}
               disabled={!running}
               onClick={() => useLive.getState().answer(r)}
-              className="group flex h-14 w-32 items-center justify-center gap-2 rounded-xl border border-border text-sm transition hover:bg-surface-2 disabled:opacity-40"
+              className="group flex h-14 w-36 items-center justify-center gap-2 rounded-xl border border-border text-sm transition hover:bg-surface-2 disabled:opacity-40"
             >
               <span className="h-2 w-2 rounded-full" style={{ background: RES_COLOR[r] }} />
               <span className="text-text">{RES_LABEL[r]}</span>
@@ -201,7 +202,7 @@ export function LivePanel(): React.JSX.Element {
       {done > 0 && (
         <div className="border-t border-border pt-4">
           <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-            {(['D', 'Y', 'B'] as Res[]).map((r) => (
+            {(['D', 'Y', 'B', 'C'] as Res[]).map((r) => (
               <span key={r} className="tabular">
                 <span style={{ color: RES_COLOR[r] }}>●</span> {live.results.filter((x) => x === r).length} {RES_LABEL[r].toLowerCase()}
               </span>
@@ -228,6 +229,7 @@ function Summary(): React.JSX.Element {
     const c = results.filter((r) => r === 'D').length
     const w = results.filter((r) => r === 'Y').length
     const b = results.filter((r) => r === 'B').length
+    const h = results.filter((r) => r === 'C').length
     const slow = times
       .map((t, i) => ({ t, i, r: results[i] }))
       .sort((x, y) => y.t - x.t)
@@ -257,7 +259,7 @@ function Summary(): React.JSX.Element {
           <Stat label="Soru" value={String(n)} />
           <Stat label="Toplam süre" value={fmtDur(secs)} />
           <Stat label="Ortalama" value={fmtDur(secs / n) + '/soru'} />
-          <Stat label="D · Y · B" value={`${c} · ${w} · ${b}`} />
+          <Stat label={h ? 'D · Y · B · Ç' : 'D · Y · B'} value={h ? `${c} · ${w} · ${b} · ${h}` : `${c} · ${w} · ${b}`} />
           <Stat label="Net" value={fmtNum(netOf(c, w), 2)} />
         </div>
         <QuestionChart times={times} results={results} avg={secs / n} height={200} />
@@ -269,7 +271,7 @@ function Summary(): React.JSX.Element {
                 <span className="text-muted">{s.i + 1}. soru</span>
                 <span className="tabular flex items-center gap-3">
                   <span className="text-text">{fmtDur(s.t)}</span>
-                  <span style={{ color: RES_COLOR[s.r] }} className="w-12 text-right text-xs">
+                  <span style={{ color: RES_COLOR[s.r] }} className="w-24 text-right text-xs">
                     {RES_LABEL[s.r]}
                   </span>
                 </span>
@@ -302,6 +304,7 @@ function Summary(): React.JSX.Element {
                 correct: c,
                 wrong: w,
                 blank: b,
+                helped: h > 0 ? h : undefined,
                 perQuestion: times,
                 perResult: results,
                 source: src?.trim() || undefined,

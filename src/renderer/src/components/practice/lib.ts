@@ -3,14 +3,15 @@ import type { PracticeSet } from '../../../../shared/types'
 import { SUBJECT_MAP } from '@/data/curriculum'
 import { toKey } from '@/lib/date'
 
-export type Res = 'D' | 'Y' | 'B'
+export type Res = 'D' | 'Y' | 'B' | 'C'
 
 export const RES_COLOR: Record<Res, string> = {
   D: 'rgb(var(--success))',
   Y: 'rgb(var(--danger))',
-  B: 'rgb(var(--subtle))'
+  B: 'rgb(var(--subtle))',
+  C: '#4f9a95'
 }
-export const RES_LABEL: Record<Res, string> = { D: 'Doğru', Y: 'Yanlış', B: 'Boş' }
+export const RES_LABEL: Record<Res, string> = { D: 'Doğru', Y: 'Yanlış', B: 'Boş', C: 'Çözüme baktım' }
 
 export const DEFAULT_SUBJECT = 'tyt-turkce'
 export const DEFAULT_TARGET = 72
@@ -74,6 +75,7 @@ export interface DayAgg {
   correct: number
   wrong: number
   blank: number
+  helped: number
   avg: number
   acc: number
 }
@@ -81,12 +83,13 @@ export interface DayAgg {
 export function aggregateDays(sets: PracticeSet[]): DayAgg[] {
   const m = new Map<string, DayAgg>()
   for (const s of sets) {
-    const d = m.get(s.date) ?? { date: s.date, count: 0, seconds: 0, correct: 0, wrong: 0, blank: 0, avg: 0, acc: 0 }
+    const d = m.get(s.date) ?? { date: s.date, count: 0, seconds: 0, correct: 0, wrong: 0, blank: 0, helped: 0, avg: 0, acc: 0 }
     d.count += s.count
     d.seconds += s.seconds
     d.correct += s.correct
     d.wrong += s.wrong
     d.blank += s.blank
+    d.helped += s.helped ?? 0
     m.set(s.date, d)
   }
   return [...m.values()]

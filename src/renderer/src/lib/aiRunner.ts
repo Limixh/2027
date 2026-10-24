@@ -59,10 +59,25 @@ export function askAi(opts: AskOptions): Promise<string> {
 
 export const TUTOR_SYSTEM = `Sen YKS'ye (2027, mevcut 2018 tabanlı müfredat) hazırlanan bir öğrencinin birebir özel ders öğretmenisin. Her zaman Türkçe, sade ve cesaret verici ama net yaz. Matematik ifadelerini düz metinle yaz (ör. x^2, √3, 3/4); LaTeX kullanma.`
 
-export function analysisPrompt(p: { subject: string; topic?: string; hasAttempt: boolean; note?: string }): string {
+export function analysisPrompt(p: {
+  subject: string
+  topic?: string
+  hasAttempt: boolean
+  note?: string
+  correctAnswer?: string
+  myAnswer?: string
+  usedSolution?: boolean
+}): string {
+  const facts = [
+    p.correctAnswer ? `Doğru cevap (cevap anahtarından): ${p.correctAnswer} — çözümün bu cevaba ulaşmalı; ulaşamıyorsan bunu açıkça söyle.` : '',
+    p.myAnswer ? `Öğrencinin işaretlediği cevap: ${p.myAnswer}.` : '',
+    p.usedSolution
+      ? 'Öğrenci bu soruyu kendisi çözemeyip ÇÖZÜME BAKARAK yaptı: hangi adımı kendi başına bulamamış olabileceğini ve bu adımı nasıl kendisi bulabileceğini (hangi ipucu/kalıp) özellikle açıkla.'
+      : ''
+  ].filter(Boolean)
   return `Ekteki görsel(ler) öğrencinin yanlış yaptığı / çözemediği bir ${p.subject}${p.topic ? ` (${p.topic})` : ''} sorusu.${
     p.hasAttempt ? ' Görsellerden biri öğrencinin silinmemiş, karalamalı kendi çözüm denemesi.' : ''
-  }${p.note ? `\nÖğrencinin notu: ${p.note}` : ''}
+  }${p.note ? `\nÖğrencinin notu: ${p.note}` : ''}${facts.length ? `\n${facts.join('\n')}` : ''}
 
 Şunları başlıklarla yaz:
 ## Soru ne istiyor?
@@ -79,7 +94,7 @@ ${
 2-4 madde: hangi kural/kavram, hangi tuzak, hangi kontrol alışkanlığı.
 
 En sonda tek bir kod bloğu ekle (dili yks-note), içinde yalnızca JSON:
-{"topic":"konunun müfredattaki adı","kind":"bilgi|dikkat|sure|yorum|bos","summary":"hatanın tek cümlelik özeti","lesson":"akılda tutulacak tek cümle"}`
+{"topic":"konunun müfredattaki adı","kind":"bilgi|dikkat|sure|yorum|bos|cozum","summary":"hatanın tek cümlelik özeti","lesson":"akılda tutulacak tek cümle"}`
 }
 
 export function similarPrompt(p: { subject: string; topic?: string; count: number; analysis?: string }): string {

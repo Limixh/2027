@@ -40,9 +40,9 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
   const note = notes.find((n) => n.id === queue[idx])
   const finished = idx >= queue.length
 
-  const answer = (knows: boolean): void => {
+  const answer = (knows: boolean, help = false): void => {
     if (!note) return
-    recordRetry(note.id, knows)
+    recordRetry(note.id, knows, help)
     if (knows) setKnown((k) => k + 1)
     else setHard((h) => h + 1)
     setRevealed(false)
@@ -59,6 +59,7 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
         setRevealed(true)
       } else if (revealed && e.key === '1') answer(false)
       else if (revealed && e.key === '2') answer(true)
+      else if (revealed && e.key === '3') answer(false, true)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -84,6 +85,9 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
           <>
             <Button variant="outline" icon={<ThumbsDown size={14} />} onClick={() => answer(false)}>
               Çözemedim <kbd className="ml-1 rounded bg-surface-3 px-1 text-[10px] text-muted">1</kbd>
+            </Button>
+            <Button variant="outline" onClick={() => answer(false, true)}>
+              Çözüme bakarak <kbd className="ml-1 rounded bg-surface-3 px-1 text-[10px] text-muted">3</kbd>
             </Button>
             <Button variant="primary" icon={<ThumbsUp size={14} />} onClick={() => answer(true)}>
               Çözdüm <kbd className="ml-1 rounded bg-white/20 px-1 text-[10px]">2</kbd>

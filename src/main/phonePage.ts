@@ -63,6 +63,13 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   <div style="height:8px"></div>
   <select id="topic" disabled><option value="">Konu (isteğe bağlı)</option></select>
 
+  <label class="t">Cevaplar (isteğe bağlı)</label>
+  <div class="row">
+    <select id="correct"><option value="">Doğru cevap</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
+    <select id="mine"><option value="">Benim cevabım</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option value="Boş">Boş</option></select>
+  </div>
+  <label style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:15px"><input id="help" type="checkbox" style="display:inline;width:20px;height:20px" /> Çözüme bakarak yaptım</label>
+
   <label class="t">Not (isteğe bağlı)</label>
   <textarea id="note" placeholder="ör. Süre yetmedi / şıklar arasında kaldım"></textarea>
   <div style="height:8px"></div>
@@ -153,13 +160,13 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
 
   sendBtn.addEventListener('click', function () {
     sendBtn.disabled = true; sendBtn.textContent = 'Gönderiliyor…';
-    var body = { subjectId: subjectSel.value, topicId: topicSel.value, note: $('note').value, source: $('source').value, question: state.q, attempt: state.a };
+    var body = { subjectId: subjectSel.value, topicId: topicSel.value, note: $('note').value, source: $('source').value, question: state.q, attempt: state.a, correctAnswer: $('correct').value, myAnswer: $('mine').value, usedSolution: $('help').checked };
     try { localStorage.setItem('yks-phone-last', JSON.stringify({ subjectId: subjectSel.value })); } catch (e) {}
     fetch('/api/upload?t=' + encodeURIComponent(t), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Hata'); return j; }); })
       .then(function (j) {
         show('Gönderildi ✓ Bilgisayarda Hata Defteri\\'ne düştü (' + j.received + '). Sıradaki soruyu ekleyebilirsin.', false);
-        state = { q: [], a: [] }; $('note').value = ''; render(); window.scrollTo(0, 0);
+        state = { q: [], a: [] }; $('note').value = ''; $('correct').value = ''; $('mine').value = ''; $('help').checked = false; render(); window.scrollTo(0, 0);
       })
       .catch(function (e) { show(e.message + ' — bilgisayar ve telefon aynı Wi-Fi\\'da mı?', true); })
       .finally(function () { sendBtn.textContent = 'Gönder'; sendBtn.disabled = state.q.length === 0; });
