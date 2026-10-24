@@ -67,7 +67,10 @@ export default function App(): React.JSX.Element {
   // Telefondan gelen soru fotoğraflarını Hata Defteri'ne ekle (uygulama açıkken her sayfada)
   useEffect(() => {
     if (!window.api) return
-    return window.api.phone.onUpload((u) => {
+    // Toplu gönderimde her soru için ayrı bildirim yerine tek özet bildirim
+    let bulkCount = 0
+    let bulkTimer: ReturnType<typeof setTimeout> | undefined
+    const off = window.api.phone.onUpload((u) => {
       const st = useStore.getState()
       st.addMistakeNote({
         subjectId: u.subjectId,
@@ -87,8 +90,18 @@ export default function App(): React.JSX.Element {
         inbox: true,
         nextReview: addDays(todayKey(), 1)
       })
-      toast('📱 Telefondan yeni soru geldi — Hata Defteri', 'info')
+      if (!u.bulk) return toast('📱 Telefondan yeni soru geldi — Hata Defteri', 'info')
+      bulkCount++
+      clearTimeout(bulkTimer)
+      bulkTimer = setTimeout(() => {
+        toast(`📱 Telefondan ${bulkCount} soru geldi — Hata Defteri → Toplu giriş`, 'info')
+        bulkCount = 0
+      }, 2500)
     })
+    return () => {
+      clearTimeout(bulkTimer)
+      off()
+    }
   }, [])
 
   if (!ready) {

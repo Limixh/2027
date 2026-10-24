@@ -7,7 +7,7 @@ import { Badge, Button, Modal, Select, Textarea, cn, toast } from '@/components/
 import { SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
 import { MISTAKE_KIND_LABEL } from '@/lib/exam'
 import { formatDate, todayKey } from '@/lib/date'
-import { AiError, TUTOR_SYSTEM, analysisPrompt, askAi, similarPrompt, splitNoteMeta } from '@/lib/aiRunner'
+import { AiError, TUTOR_SYSTEM, analysisPrompt, askAiWithModel, similarPrompt, splitNoteMeta } from '@/lib/aiRunner'
 import { resolveTopic } from '@/lib/aiActions'
 import { uid } from '@/lib/id'
 import { useStore } from '@/lib/store'
@@ -98,7 +98,7 @@ export function NoteDetail({
     setError('')
     setLive('')
     try {
-      const full = await askAi({
+      const { text: full, model } = await askAiWithModel({
         system: TUTOR_SYSTEM,
         prompt: analysisPrompt({
           subject: subject?.name ?? 'YKS',
@@ -117,7 +117,7 @@ export function NoteDetail({
         onText: setLive
       })
       const { body, meta } = splitNoteMeta(full)
-      const patch: Partial<MistakeNote> = { aiAnalysis: body, aiAnalyzedAt: new Date().toISOString() }
+      const patch: Partial<MistakeNote> = { aiAnalysis: body, aiAnalyzedAt: new Date().toISOString(), aiModel: model }
       const cur = useStore.getState().data.mistakeNotes.find((m) => m.id === id)
       if (meta && cur) {
         if (meta.kind && (KINDS as string[]).includes(meta.kind)) patch.kind = meta.kind as MistakeKind
@@ -149,14 +149,14 @@ export function NoteDetail({
     setSimError('')
     setSimLive('')
     try {
-      const full = await askAi({
+      const { text: full, model } = await askAiWithModel({
         system: TUTOR_SYSTEM,
         prompt: similarPrompt({ subject: subject?.name ?? 'YKS', topic: topic?.name, count, analysis: note.aiAnalysis }),
         attachments: note.questionImages?.length ? note.questionImages : imgs.length ? imgs : undefined,
         onText: setSimLive
       })
       const cur = useStore.getState().data.mistakeNotes.find((m) => m.id === id)
-      update(id, { similar: [...(cur?.similar ?? []), { id: uid(), markdown: full.trim(), createdAt: new Date().toISOString() }] })
+      update(id, { similar: [...(cur?.similar ?? []), { id: uid(), markdown: full.trim(), createdAt: new Date().toISOString(), model }] })
       setSimLive('')
     } catch (e) {
       setSimError(errText(e))
@@ -442,7 +442,9 @@ export function NoteDetail({
               <Md>{analysisBody}</Md>
               {analyzing && <div className="mt-2 text-xs text-subtle">Yazılıyor…</div>}
               {!analyzing && note.aiAnalyzedAt && (
-                <div className="mt-2 text-[11px] text-subtle">{formatDate(note.aiAnalyzedAt.slice(0, 10))} tarihinde analiz edildi</div>
+                <div className="mt-2 text-[11px] text-subtle">
+                  {formatDate(note.aiAnalyzedAt.slice(0, 10))} tarihinde analiz edildi{note.aiModel && ` · ${note.aiModel}`}
+                </div>
               )}
             </div>
           ) : analyzing ? (
@@ -499,7 +501,10 @@ export function NoteDetail({
               const open = shown[s.id]
               return (
                 <div key={s.id} className={cn(idx > 0 && 'border-t border-border pt-4')}>
-                  <div className="mb-2 text-[11px] text-subtle">{formatDate(s.createdAt.slice(0, 10))}</div>
+                  <div className="mb-2 text-[11px] text-subtle">
+                    {formatDate(s.createdAt.slice(0, 10))}
+                    {s.model && ` · ${s.model}`}
+                  </div>
                   <Md>{questions}</Md>
                   {answers && (
                     <div className="mt-3">

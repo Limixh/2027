@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ClipboardList, Plus, Play, Search, Smartphone, X } from 'lucide-react'
+import { ClipboardList, Inbox, Plus, Play, Search, Smartphone, X } from 'lucide-react'
 import type { MistakeNote } from '../../../shared/types'
 import { Button, Card, EmptyState, Input, PageHeader, Segmented, Select, cn, confirm, toast } from '@/components/ui'
 import { SUBJECTS, SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
@@ -13,6 +13,7 @@ import { MistakeCard } from '@/components/mistakes/MistakeCard'
 import { ReviewMode } from '@/components/mistakes/ReviewMode'
 import { NoteDetail } from '@/components/mistakes/NoteDetail'
 import { PhoneUploadModal } from '@/components/phone/PhoneUpload'
+import { InboxWizard } from '@/components/mistakes/InboxWizard'
 
 type StatusFilter = 'all' | 'open' | 'due' | 'done'
 
@@ -38,6 +39,8 @@ export default function Mistakes(): React.JSX.Element {
   const [search, setSearch] = useState('')
   const [detailId, setDetailId] = useState<string | null>(null)
   const [phone, setPhone] = useState(false)
+  const [wizard, setWizard] = useState(false)
+  const closeWizard = useCallback(() => setWizard(false), [])
 
   const openNotes = useMemo(() => notes.filter((n) => !n.resolved), [notes])
 
@@ -100,6 +103,12 @@ export default function Mistakes(): React.JSX.Element {
         description="Yanlış yaptığın soruları ekle, AI ile analiz et, farklı günlerde tekrar çöz."
         actions={
           <>
+            {inboxCount > 0 && (
+              <Button variant="outline" icon={<Inbox size={14} />} onClick={() => setWizard(true)} title="Telefondan gelen soruların bilgilerini sırayla gir">
+                Toplu giriş
+                <span className="tabular rounded bg-info/15 px-1.5 text-[11px] font-semibold text-info">{inboxCount}</span>
+              </Button>
+            )}
             <Button variant="outline" icon={<Smartphone size={14} />} onClick={() => setPhone(true)}>
               Telefondan yükle
             </Button>
@@ -140,7 +149,10 @@ export default function Mistakes(): React.JSX.Element {
             {inboxCount > 0 && (
               <>
                 {' '}
-                · <span className="tabular text-info">{inboxCount}</span> telefondan geldi
+                ·{' '}
+                <button type="button" className="hover:underline" onClick={() => setWizard(true)}>
+                  <span className="tabular text-info">{inboxCount}</span> telefondan geldi
+                </button>
               </>
             )}
           </p>
@@ -244,6 +256,7 @@ export default function Mistakes(): React.JSX.Element {
       {modal && <MistakeModal note={modal.note} draft={modal.draft} onClose={() => setModal(null)} />}
       {reviewIds && <ReviewMode ids={reviewIds} onClose={() => setReviewIds(null)} />}
       <PhoneUploadModal open={phone} onClose={() => setPhone(false)} />
+      {wizard && <InboxWizard onClose={closeWizard} />}
     </div>
   )
 }

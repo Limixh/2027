@@ -102,6 +102,8 @@ export function chat(sender: WebContents, req: CliChatRequest): void {
   let stderr = ''
   let finished = false
   let gotText = false
+  // CLI'ın gerçekte kullandığı model (init mesajından); bulunamazsa seçilen model
+  let usedModel = req.model
   const finish = (ev: AiStreamEvent): void => {
     if (finished) return
     finished = true
@@ -123,7 +125,9 @@ export function chat(sender: WebContents, req: CliChatRequest): void {
       } catch {
         continue
       }
-      if (msg.type === 'stream_event') {
+      if (msg.type === 'system' && msg.subtype === 'init' && typeof msg.model === 'string' && msg.model) {
+        usedModel = msg.model
+      } else if (msg.type === 'stream_event') {
         const ev = msg.event as { type?: string; delta?: { type?: string; text?: string } } | undefined
         if (ev?.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) {
           gotText = true
@@ -139,7 +143,7 @@ export function chat(sender: WebContents, req: CliChatRequest): void {
             requestId: req.requestId,
             type: 'done',
             stopReason: (msg.stop_reason as string) ?? 'end_turn',
-            model: req.model,
+            model: usedModel,
             fullText: text || undefined
           })
         }
@@ -162,7 +166,7 @@ export function chat(sender: WebContents, req: CliChatRequest): void {
     }
     finish(
       code === 0
-        ? { requestId: req.requestId, type: 'done', stopReason: 'end_turn', model: req.model }
+        ? { requestId: req.requestId, type: 'done', stopReason: 'end_turn', model: usedModel }
         : { requestId: req.requestId, type: 'error', message: explain(stderr || `Claude CLI ${code} koduyla kapandı.`) }
     )
   })

@@ -1,7 +1,7 @@
 // Sohbet ekranı dışında tek seferlik AI istekleri (soru analizi, benzer soru üretimi vb.).
 // Ayarlardaki bağlantı türünü kullanır: Claude aboneliği (CLI), ChatGPT (Codex) veya Claude API.
-import type { ChatAttachment } from '../../../shared/types'
-import { buildCliPrompt } from './aiContext'
+import type { ChatAttachment, Settings } from '../../../shared/types'
+import { AI_MODELS, buildCliPrompt } from './aiContext'
 import { repairJson } from './aiActions'
 import { uid } from './id'
 import { useStore } from './store'
@@ -18,8 +18,26 @@ export interface AskOptions {
 
 export class AiError extends Error {}
 
+const PROVIDER_LABEL: Record<Settings['aiProvider'], string> = {
+  cli: 'Claude aboneliği',
+  api: 'Claude API',
+  codex: 'ChatGPT aboneliği'
+}
+
+/** Cevabı yazan modelin okunur adı, ör. "Claude Opus 5.5 · Claude aboneliği" */
+export function modelLabel(model: string, provider: Settings['aiProvider']): string {
+  const known = AI_MODELS.find((m) => model.startsWith(m.id))
+  const name = known?.label ?? (!model || model === 'codex' ? 'varsayılan model' : model.replace(/^gpt/i, 'GPT'))
+  return `${name} · ${PROVIDER_LABEL[provider]}`
+}
+
 /** AI'ye tek bir soru sorar; tam cevabı döndürür */
 export function askAi(opts: AskOptions): Promise<string> {
+  return askAiWithModel(opts).then((r) => r.text)
+}
+
+/** askAi gibi; cevapla birlikte onu yazan modelin okunur adını da döndürür */
+export function askAiWithModel(opts: AskOptions): Promise<{ text: string; model: string }> {
   const api = window.api
   if (!api) return Promise.reject(new AiError('AI yalnızca masaüstü uygulamasında çalışır'))
   const st = useStore.getState().data.settings
@@ -39,7 +57,7 @@ export function askAi(opts: AskOptions): Promise<string> {
         if (st.aiProvider === 'codex' && ev.model && ev.model !== 'codex' && ev.model !== st.codexModel) {
           useStore.getState().updateSettings({ codexModel: ev.model })
         }
-        resolve(ev.fullText || text)
+        resolve({ text: ev.fullText || text, model: modelLabel(ev.model, st.aiProvider) })
       }
     })
     const messages = [{ role: 'user' as const, content: opts.prompt, attachments: opts.attachments }]

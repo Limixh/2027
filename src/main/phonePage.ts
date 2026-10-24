@@ -32,6 +32,11 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   .msg.err { display:block; background:color-mix(in srgb, var(--err) 15%, transparent); color:var(--err); }
   .hint { color:var(--muted); font-size:12px; margin-top:6px; }
   input[type=file] { display:none; }
+  .tabs { display:flex; gap:4px; padding:4px; border-radius:12px; background:var(--card); border:1px solid var(--border); }
+  .tabs button { flex:1; padding:10px; border:0; border-radius:9px; background:transparent; color:var(--muted); font-size:15px; font-weight:600; }
+  .tabs button.on { background:var(--accent); color:#fff; }
+  .thumbs .n { position:absolute; left:4px; bottom:4px; min-width:20px; padding:0 5px; border-radius:6px; background:rgba(0,0,0,.6); color:#fff; font-size:11px; line-height:18px; text-align:center; }
+  [hidden] { display:none !important; }
 </style>
 </head>
 <body>
@@ -39,6 +44,29 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   <h1>Soru gönder</h1>
   <div class="sub">YKS 2027 Takip · fotoğraflar doğrudan bilgisayarındaki Hata Defteri'ne gider</div>
 
+  <div class="tabs">
+    <button type="button" data-mode="single" class="on">Tek soru</button>
+    <button type="button" data-mode="bulk">Toplu</button>
+  </div>
+
+  <div id="bulk" hidden>
+    <label class="t">Soruların fotoğrafları · her fotoğraf ayrı bir soru olur</label>
+    <div class="row">
+      <button class="pick" type="button" data-for="bCam">📷 Fotoğraf çek</button>
+      <button class="pick" type="button" data-for="bGal">🖼️ Galeriden</button>
+    </div>
+    <input id="bCam" type="file" accept="image/*" capture="environment" />
+    <input id="bGal" type="file" accept="image/*" multiple />
+    <div class="hint">Arka arkaya çekebilirsin (en fazla 40). Cevap, konu ve diğer bilgileri bilgisayarda <b>Toplu giriş</b> ekranında tek tek girersin.</div>
+    <div class="thumbs" id="bThumbs"></div>
+
+    <label class="t">Ortak bilgiler (isteğe bağlı)</label>
+    <select id="bSubject"><option value="">Ders (hepsi aynı dersse seç)</option></select>
+    <div style="height:8px"></div>
+    <input id="bSource" type="text" placeholder="Kaynak (ör. 3D TYT Deneme 4)" />
+  </div>
+
+  <div id="single">
   <label class="t">1. Sorunun fotoğrafı</label>
   <div class="row">
     <button class="pick" type="button" data-for="qCam">📷 Fotoğraf çek</button>
@@ -76,6 +104,7 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   <textarea id="note" placeholder="ör. Süre yetmedi / şıklar arasında kaldım"></textarea>
   <div style="height:8px"></div>
   <input id="source" type="text" placeholder="Kaynak (ör. 3D TYT Deneme 4)" />
+  </div>
 
   <div class="msg" id="msg"></div>
 </main>
@@ -83,7 +112,9 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
 <script>
 (function () {
   var t = new URLSearchParams(location.search).get('t') || '';
-  var state = { q: [], a: [] };
+  var MAX_BULK = 40;
+  var state = { q: [], a: [], b: [] };
+  var mode = 'single';
   var $ = function (id) { return document.getElementById(id); };
   $('help').addEventListener('change', function () { $('hint').style.display = $('help').value === 'hint' ? 'block' : 'none'; });
   var subjectSel = $('subject'), topicSel = $('topic'), msg = $('msg'), sendBtn = $('send');
@@ -91,17 +122,34 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   var last = {};
   try { last = JSON.parse(localStorage.getItem('yks-phone-last') || '{}'); } catch (e) {}
 
-  fetch('/api/catalog?t=' + encodeURIComponent(t)).then(function (r) { return r.json(); }).then(function (c) {
-    catalog = c;
+  function fillSubjects(sel, c) {
     ['TYT', 'AYT'].forEach(function (exam) {
       var g = document.createElement('optgroup'); g.label = exam;
       c.filter(function (s) { return s.exam === exam; }).forEach(function (s) {
         var o = document.createElement('option'); o.value = s.id; o.textContent = exam + ' ' + s.name; g.appendChild(o);
       });
-      subjectSel.appendChild(g);
+      sel.appendChild(g);
     });
+  }
+
+  fetch('/api/catalog?t=' + encodeURIComponent(t)).then(function (r) { return r.json(); }).then(function (c) {
+    catalog = c;
+    fillSubjects(subjectSel, c);
+    fillSubjects($('bSubject'), c);
     if (last.subjectId) { subjectSel.value = last.subjectId; fillTopics(); }
   }).catch(function () { show('Bağlantı kurulamadı. Bilgisayardaki QR kodu yeniden okut.', true); });
+
+  // Tek soru / toplu mod
+  document.querySelectorAll('.tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      mode = b.getAttribute('data-mode');
+      document.querySelectorAll('.tabs button').forEach(function (x) { x.className = x === b ? 'on' : ''; });
+      $('single').hidden = mode !== 'single';
+      $('bulk').hidden = mode !== 'bulk';
+      msg.className = 'msg';
+      render();
+    });
+  });
 
   function fillTopics() {
     topicSel.innerHTML = '<option value="">Konu (isteğe bağlı)</option>';
@@ -140,39 +188,72 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   function bind(inputId, key) {
     $(inputId).addEventListener('change', function (e) {
       var files = Array.prototype.slice.call(e.target.files || []);
-      Promise.all(files.map(shrink)).then(function (urls) { state[key] = state[key].concat(urls).slice(0, 6); render(); });
+      Promise.all(files.map(shrink)).then(function (urls) { state[key] = state[key].concat(urls).slice(0, key === 'b' ? MAX_BULK : 6); render(); });
       e.target.value = '';
     });
   }
-  bind('qCam', 'q'); bind('qGal', 'q'); bind('aCam', 'a'); bind('aGal', 'a');
+  bind('qCam', 'q'); bind('qGal', 'q'); bind('aCam', 'a'); bind('aGal', 'a'); bind('bCam', 'b'); bind('bGal', 'b');
+
+  function sendLabel() {
+    if (mode === 'single') return 'Gönder';
+    return state.b.length ? state.b.length + ' soruyu gönder' : 'Gönder';
+  }
 
   function render() {
-    ['q', 'a'].forEach(function (key) {
+    ['q', 'a', 'b'].forEach(function (key) {
       var box = $(key + 'Thumbs'); box.innerHTML = '';
       state[key].forEach(function (u, i) {
         var d = document.createElement('div');
-        d.innerHTML = '<img src="' + u + '" /><button type="button">×</button>';
+        d.innerHTML = '<img src="' + u + '" /><button type="button">×</button>' + (key === 'b' ? '<span class="n">' + (i + 1) + '</span>' : '');
         d.querySelector('button').onclick = function () { state[key].splice(i, 1); render(); };
         box.appendChild(d);
       });
     });
-    sendBtn.disabled = state.q.length === 0;
+    sendBtn.textContent = sendLabel();
+    sendBtn.disabled = (mode === 'single' ? state.q : state.b).length === 0;
   }
 
   function show(text, err) { msg.textContent = text; msg.className = 'msg ' + (err ? 'err' : 'ok'); }
 
-  sendBtn.addEventListener('click', function () {
-    sendBtn.disabled = true; sendBtn.textContent = 'Gönderiliyor…';
+  function post(body) {
+    return fetch('/api/upload?t=' + encodeURIComponent(t), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Hata'); return j; }); });
+  }
+
+  function sendSingle() {
     var body = { subjectId: subjectSel.value, topicId: topicSel.value, note: $('note').value, source: $('source').value, question: state.q, attempt: state.a, correctAnswer: $('correct').value, myAnswer: $('mine').value, usedSolution: $('help').value === 'sol', usedHint: $('help').value === 'hint', hintSeen: $('help').value === 'hint' ? $('hint').value : '' };
     try { localStorage.setItem('yks-phone-last', JSON.stringify({ subjectId: subjectSel.value })); } catch (e) {}
-    fetch('/api/upload?t=' + encodeURIComponent(t), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Hata'); return j; }); })
-      .then(function (j) {
-        show('Gönderildi ✓ Bilgisayarda Hata Defteri\\'ne düştü (' + j.received + '). Sıradaki soruyu ekleyebilirsin.', false);
-        state = { q: [], a: [] }; $('note').value = ''; $('correct').value = ''; $('mine').value = ''; $('help').value = ''; $('hint').value = ''; $('hint').style.display = 'none'; render(); window.scrollTo(0, 0);
-      })
+    return post(body).then(function (j) {
+      show('Gönderildi ✓ Bilgisayarda Hata Defteri\\'ne düştü (' + j.received + '). Sıradaki soruyu ekleyebilirsin.', false);
+      state.q = []; state.a = []; $('note').value = ''; $('correct').value = ''; $('mine').value = ''; $('help').value = ''; $('hint').value = ''; $('hint').style.display = 'none';
+    });
+  }
+
+  // Toplu: her fotoğraf ayrı istek (büyük tek istek yerine; yarıda kesilirse gönderilmeyenler telefonda kalır)
+  function sendBulk() {
+    var total = state.b.length, sent = 0;
+    var common = { subjectId: $('bSubject').value, source: $('bSource').value, bulk: true };
+    function next() {
+      if (!state.b.length) return Promise.resolve();
+      sendBtn.textContent = 'Gönderiliyor ' + (sent + 1) + '/' + total + '…';
+      return post(Object.assign({ question: [state.b[0]] }, common)).then(function () {
+        state.b.shift(); sent++; render(); sendBtn.disabled = true;
+        return next();
+      });
+    }
+    return next().then(function () {
+      show(total + ' soru gönderildi ✓ Bilgisayarda Hata Defteri → Toplu giriş ile bilgilerini tek tek gir.', false);
+    }, function (e) {
+      throw new Error(sent + '/' + total + ' gönderildi, kalanlar telefonda duruyor. ' + e.message);
+    });
+  }
+
+  sendBtn.addEventListener('click', function () {
+    sendBtn.disabled = true; sendBtn.textContent = 'Gönderiliyor…';
+    (mode === 'single' ? sendSingle() : sendBulk())
+      .then(function () { window.scrollTo(0, 0); })
       .catch(function (e) { show(e.message + ' — bilgisayar ve telefon aynı Wi-Fi\\'da mı?', true); })
-      .finally(function () { sendBtn.textContent = 'Gönder'; sendBtn.disabled = state.q.length === 0; });
+      .finally(function () { render(); });
   });
 })();
 </script>

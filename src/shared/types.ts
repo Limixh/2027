@@ -116,8 +116,10 @@ export interface MistakeNote {
   /** AI'nin analizi (Markdown): nerede neden takıldın, doğru çözüm */
   aiAnalysis?: string
   aiAnalyzedAt?: string
+  /** Analizi yazan model (ör. "Claude Opus 5.5 · abonelik") */
+  aiModel?: string
   /** AI'nin ürettiği benzer soru setleri (Markdown; cevaplar '---CEVAPLAR---' satırından sonra) */
-  similar?: { id: string; markdown: string; createdAt: string }[]
+  similar?: { id: string; markdown: string; createdAt: string; model?: string }[]
   /** Tekrar çözme geçmişi (help: çözüme bakarak çözdü) */
   retries?: { date: string; solved: boolean; help?: boolean }[]
   /** Bir sonraki tekrar tarihi (YYYY-MM-DD); yoksa tekrar planlanmamış */
@@ -159,6 +161,8 @@ export interface Skill {
   note?: string
   /** AI'nin ürettiği mini ders (Markdown) */
   lesson?: string
+  /** Mini dersi yazan model */
+  lessonModel?: string
   createdAt: string
   updatedAt: string
 }
@@ -391,6 +395,8 @@ export interface PhoneUpload {
   source?: string
   questionImages: ChatAttachment[]
   attemptImages: ChatAttachment[]
+  /** Toplu modda gönderildi (bilgiler bilgisayarda Toplu giriş ekranında girilir) */
+  bulk?: boolean
 }
 
 export interface PhoneServerInfo {

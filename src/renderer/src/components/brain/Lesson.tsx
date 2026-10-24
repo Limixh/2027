@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm'
 import { Eye, EyeOff, RefreshCw, Sparkles } from 'lucide-react'
 import { SUBJECT_MAP } from '@/data/curriculum'
 import { Button } from '@/components/ui'
-import { AiError, askAi, TUTOR_SYSTEM } from '@/lib/aiRunner'
+import { AiError, askAiWithModel, TUTOR_SYSTEM } from '@/lib/aiRunner'
 import { STATUS_LABEL } from '@/lib/brain'
 import { useStore } from '@/lib/store'
 import { KIND_META, groupTopics, topicShort, type SkillRow } from './shared'
@@ -72,8 +72,8 @@ export function Lesson({ skill }: { skill: SkillRow }): React.JSX.Element {
         const n = e.noteId ? notes.find((m) => m.id === e.noteId) : undefined
         if (n?.text) noteTexts[n.id] = n.text
       }
-      const full = await askAi({ system: TUTOR_SYSTEM, prompt: lessonPrompt(skill, noteTexts), onText: setLive })
-      update(skill.id, { lesson: full.trim() })
+      const { text: full, model } = await askAiWithModel({ system: TUTOR_SYSTEM, prompt: lessonPrompt(skill, noteTexts), onText: setLive })
+      update(skill.id, { lesson: full.trim(), lessonModel: model })
       setLive('')
     } catch (e) {
       setError(e instanceof AiError ? e.message : 'Ders oluşturulamadı')
@@ -106,6 +106,7 @@ export function Lesson({ skill }: { skill: SkillRow }): React.JSX.Element {
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
             {busy && <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-accent align-middle" />}
           </div>
+          {!busy && skill.lessonModel && <div className="mt-2 text-[11px] text-subtle">{skill.lessonModel}</div>}
           {answers && (
             <div className="mt-4 border-t border-border pt-3">
               <Button variant="ghost" size="sm" onClick={() => setShow((v) => !v)} icon={show ? <EyeOff size={13} /> : <Eye size={13} />}>

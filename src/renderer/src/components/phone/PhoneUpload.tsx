@@ -68,6 +68,10 @@ export function PhoneUploadModal({ open, onClose }: { open: boolean; onClose: ()
               <li>
                 <b className="text-text">4.</b> Soru anında burada, Hata Defteri'nde "Telefondan geldi" olarak görünür. Sayfa açık kaldıkça arka arkaya gönderebilirsin.
               </li>
+              <li>
+                <b className="text-text">Çok soru mu var?</b> Telefonda <b className="text-text">Toplu</b> sekmesiyle hepsini fotoğraflayıp tek seferde gönder; bilgilerini
+                burada <b className="text-text">Toplu giriş</b> ile tek tek gir.
+              </li>
             </ol>
             <div className="mt-4 flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-xs text-muted">
               <Wifi size={14} className="text-success" /> Bağlantı açık · bu oturumda {info.received} yükleme

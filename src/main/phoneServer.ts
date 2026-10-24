@@ -75,6 +75,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         usedSolution?: boolean
         usedHint?: boolean
         hintSeen?: string
+        bulk?: boolean
       }
       const save = (list: string[] | undefined, prefix: string): ChatAttachment[] =>
         (list ?? []).slice(0, 6).map((b64, i) => saveAttachment(`${prefix}-${Date.now()}-${i + 1}.jpg`, b64.replace(/^data:[^,]+,/, '')))
@@ -91,7 +92,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         usedHint: (body.usedSolution !== true && body.usedHint === true) || undefined,
         hintSeen: (body.hintSeen ?? '').slice(0, 1000) || undefined,
         questionImages: question,
-        attemptImages: save(body.attempt, 'cozum')
+        attemptImages: save(body.attempt, 'cozum'),
+        bulk: body.bulk === true || undefined
       }
       received++
       if (target && !target.isDestroyed()) target.send('phone:upload', upload)

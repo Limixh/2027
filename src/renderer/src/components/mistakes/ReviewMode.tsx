@@ -158,6 +158,7 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
               {note.aiAnalysis && (
                 <div className="prose-ai">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.aiAnalysis}</ReactMarkdown>
+                  {note.aiModel && <div className="mt-2 text-[11px] text-subtle">{note.aiModel}</div>}
                 </div>
               )}
               {(note.lesson || !note.aiAnalysis) && (

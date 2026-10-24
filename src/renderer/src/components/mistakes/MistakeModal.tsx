@@ -8,7 +8,7 @@ import { addDays, todayKey } from '@/lib/date'
 import { useStore } from '@/lib/store'
 import { ImagePicker } from './ImagePicker'
 
-const HELP_OPTIONS: { id: 'none' | 'hint' | 'sol'; label: string; title: string }[] = [
+export const HELP_OPTIONS: { id: 'none' | 'hint' | 'sol'; label: string; title: string }[] = [
   { id: 'none', label: 'Kendim denedim', title: 'Çözüme bakmadım, çözemedim / yanlış yaptım' },
   { id: 'hint', label: 'Bir ipucuna baktım, gerisi benim', title: 'Çözümün sadece bir kısmına / bir trick’e baktım, gerisini kendim yaptım' },
   { id: 'sol', label: 'Çözüme bakarak yaptım', title: 'Çözümün tamamına bakarak yaptım' }
@@ -34,7 +34,6 @@ export function MistakeModal({
   const add = useStore((s) => s.addMistakeNote)
   const update = useStore((s) => s.updateMistakeNote)
   const remove = useStore((s) => s.deleteMistakeNote)
-  const lastField = useStore((s) => s.data.settings.field)
 
   const defaultSubject =
     (note ? note.subjectId : undefined) ??
@@ -59,24 +58,6 @@ export function MistakeModal({
   const [aImgs, setAImgs] = useState<ChatAttachment[]>(note?.attemptImages ?? [])
   const [pasteTo, setPasteTo] = useState<'q' | 'a'>('q')
   const hasImg = qImgs.length > 0 || aImgs.length > 0
-
-  const subject = SUBJECT_MAP[subjectId]
-  const tyt = SUBJECTS.filter((s) => s.exam === 'TYT')
-  const ayt = SUBJECTS.filter((s) => s.exam === 'AYT')
-  // kullanıcının alanına ait AYT dersleri önce
-  const aytSorted = useMemo(
-    () => [...ayt].sort((a, b) => Number(b.fields.includes(lastField)) - Number(a.fields.includes(lastField))),
-    [ayt, lastField]
-  )
-
-  const groups = useMemo(() => {
-    const m = new Map<string, typeof subject.topics>()
-    for (const t of subject?.topics ?? []) {
-      const k = t.group ?? ''
-      m.set(k, [...(m.get(k) ?? []), t])
-    }
-    return [...m.entries()]
-  }, [subject])
 
   const save = (): void => {
     setTried(true)
@@ -159,55 +140,15 @@ export function MistakeModal({
           onActivate={() => setPasteTo('a')}
         />
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Ders">
-            <Select
-              value={subjectId}
-              onChange={(e) => {
-                setSubjectId(e.target.value)
-                setTopicId('')
-              }}
-            >
-              {subjectId === '' && <option value="">— Ders seç —</option>}
-              <optgroup label="TYT">
-                {tyt.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="AYT">
-                {aytSorted.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </optgroup>
-            </Select>
-          </Field>
-          <Field label="Konu (isteğe bağlı)">
-            <Select value={topicId} onChange={(e) => setTopicId(e.target.value)}>
-              <option value="">— Konu seçme —</option>
-              {groups.map(([g, items]) =>
-                g ? (
-                  <optgroup key={g} label={g}>
-                    {items.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : (
-                  items.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))
-                )
-              )}
-            </Select>
-          </Field>
-        </div>
+        <SubjectTopicFields
+          subjectId={subjectId}
+          topicId={topicId}
+          onSubject={(v) => {
+            setSubjectId(v)
+            setTopicId('')
+          }}
+          onTopic={setTopicId}
+        />
 
         <div className="grid grid-cols-[1fr_170px] gap-3">
           <Field label="Kaynak (kitap / deneme adı)">
@@ -330,8 +271,85 @@ export function MistakeModal({
   )
 }
 
+/** Ders + konu seçimi (alanına ait AYT dersleri önce) */
+export function SubjectTopicFields({
+  subjectId,
+  topicId,
+  onSubject,
+  onTopic
+}: {
+  subjectId: string
+  topicId: string
+  onSubject: (v: string) => void
+  onTopic: (v: string) => void
+}): React.JSX.Element {
+  const lastField = useStore((s) => s.data.settings.field)
+  const subject = SUBJECT_MAP[subjectId]
+  const tyt = SUBJECTS.filter((s) => s.exam === 'TYT')
+  const aytSorted = useMemo(
+    () =>
+      SUBJECTS.filter((s) => s.exam === 'AYT').sort((a, b) => Number(b.fields.includes(lastField)) - Number(a.fields.includes(lastField))),
+    [lastField]
+  )
+
+  const groups = useMemo(() => {
+    const m = new Map<string, NonNullable<typeof subject>['topics']>()
+    for (const t of subject?.topics ?? []) {
+      const k = t.group ?? ''
+      m.set(k, [...(m.get(k) ?? []), t])
+    }
+    return [...m.entries()]
+  }, [subject])
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <Field label="Ders">
+        <Select value={subjectId} onChange={(e) => onSubject(e.target.value)}>
+          {subjectId === '' && <option value="">— Ders seç —</option>}
+          <optgroup label="TYT">
+            {tyt.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="AYT">
+            {aytSorted.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </optgroup>
+        </Select>
+      </Field>
+      <Field label="Konu (isteğe bağlı)">
+        <Select value={topicId} onChange={(e) => onTopic(e.target.value)}>
+          <option value="">— Konu seçme —</option>
+          {groups.map(([g, items]) =>
+            g ? (
+              <optgroup key={g} label={g}>
+                {items.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : (
+              items.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))
+            )
+          )}
+        </Select>
+      </Field>
+    </div>
+  )
+}
+
 /** Cevap kutusu: A-E kısayolları + serbest metin (sayısal cevaplar için) */
-function AnswerInput({ value, onChange }: { value: string; onChange: (v: string) => void }): React.JSX.Element {
+export function AnswerInput({ value, onChange }: { value: string; onChange: (v: string) => void }): React.JSX.Element {
   return (
     <div className="flex items-center gap-1">
       {['A', 'B', 'C', 'D', 'E'].map((o) => (
