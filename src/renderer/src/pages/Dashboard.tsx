@@ -18,6 +18,7 @@ import {
 import { useMemo } from 'react'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Heatmap } from '@/components/Heatmap'
+import { FocusSkillsCard } from '@/components/brain/FocusCard'
 import { subjectColor } from '@/components/study/meta'
 import { Badge, Button, Card, CardHeader, Dot, EmptyState, PageHeader, ProgressBar, Segmented, StatCard, cn } from '@/components/ui'
 import { CURRICULUM_NOTE, SUBJECT_MAP, TOPIC_MAP, subjectsFor } from '@/data/curriculum'
@@ -559,6 +560,8 @@ export default function Dashboard(): React.JSX.Element {
           </div>
         </Card>
       </div>
+
+      <FocusSkillsCard />
 
       <p className="mt-6 flex items-start gap-1.5 text-[11px] leading-relaxed text-subtle">
         <Info size={12} className="mt-0.5 shrink-0" />

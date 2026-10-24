@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { GitMerge, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, GitMerge, Play, Plus, Trash2, X } from 'lucide-react'
 import { SUBJECT_MAP } from '@/data/curriculum'
 import { Button, Input, Segmented, Select, confirm, cn } from '@/components/ui'
-import { STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
+import { dependents, rootCauses, skillDue, STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
 import { formatDate, relativeDay, todayKey } from '@/lib/date'
 import { useNav } from '@/lib/nav'
 import { useStore } from '@/lib/store'
@@ -149,6 +149,91 @@ function EvidenceForm({ skill, onDone }: { skill: SkillRow; onDone: () => void }
   )
 }
 
+function SkillChip({ s, onClick, onRemove }: { s: SkillRow; onClick: () => void; onRemove?: () => void }): React.JSX.Element {
+  return (
+    <span className="group inline-flex items-center rounded-full border border-border text-xs transition-colors hover:bg-surface-2">
+      <button type="button" onClick={onClick} className="inline-flex items-center gap-1.5 py-1 pl-2.5 pr-2.5 text-text">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_COLOR[s.strength.status] }} />
+        {s.name}
+        <span className="tabular text-subtle">{s.strength.score}</span>
+      </button>
+      {onRemove && (
+        <button type="button" onClick={onRemove} aria-label="Bağı kaldır" className="-ml-1 mr-1.5 hidden rounded p-0.5 text-subtle hover:text-danger group-hover:block">
+          <X size={11} />
+        </button>
+      )}
+    </span>
+  )
+}
+
+/** Önkoşullar (bu beceri neye dayanıyor) ve bu beceriye dayananlar */
+function Foundations({ skill, all, onSelect }: { skill: SkillRow; all: SkillRow[]; onSelect: (id: string) => void }): React.JSX.Element {
+  const update = useStore((s) => s.updateSkill)
+  const [adding, setAdding] = useState(false)
+  const prereqs = (skill.prereqIds ?? []).map((id) => all.find((s) => s.id === id)).filter((s): s is SkillRow => !!s)
+  const deps = dependents(skill, all)
+  // Döngü kurmasın: zaten bu beceriye dayananlar önkoşul yapılamaz
+  const candidates = all.filter((s) => s.id !== skill.id && !skill.prereqIds?.includes(s.id) && !s.prereqIds?.includes(skill.id))
+  return (
+    <Section
+      title="Temeller ve bağlantılar"
+      right={
+        !adding &&
+        candidates.length > 0 && (
+          <Button variant="ghost" size="sm" icon={<Plus size={13} />} onClick={() => setAdding(true)}>
+            Önkoşul ekle
+          </Button>
+        )
+      }
+    >
+      {adding && (
+        <Select
+          autoFocus
+          className="mb-4 max-w-md"
+          value=""
+          onChange={(e) => {
+            if (e.target.value) update(skill.id, { prereqIds: [...(skill.prereqIds ?? []), e.target.value] })
+            setAdding(false)
+          }}
+          onBlur={() => setAdding(false)}
+        >
+          <option value="">Bu beceri hangisine dayanıyor?</option>
+          {candidates.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </Select>
+      )}
+      <div className="space-y-4 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-[150px] shrink-0 text-muted">Dayandığı beceriler</span>
+          {prereqs.length ? (
+            prereqs.map((p) => (
+              <SkillChip
+                key={p.id}
+                s={p}
+                onClick={() => onSelect(p.id)}
+                onRemove={() => update(skill.id, { prereqIds: skill.prereqIds?.filter((x) => x !== p.id) })}
+              />
+            ))
+          ) : (
+            <span className="text-subtle">Henüz yok — “Hafızayı düzenle” AI ile bulur ya da elle ekle.</span>
+          )}
+        </div>
+        {deps.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-[150px] shrink-0 text-muted">Buna dayananlar</span>
+            {deps.map((d) => (
+              <SkillChip key={d.id} s={d} onClick={() => onSelect(d.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+    </Section>
+  )
+}
+
 function MyNote({ skill }: { skill: SkillRow }): React.JSX.Element {
   const update = useStore((s) => s.updateSkill)
   const [text, setText] = useState(skill.note ?? '')
@@ -206,13 +291,16 @@ export function SkillDetail({
   skill,
   all,
   onOpenNote,
-  onChanged
+  onChanged,
+  onReview
 }: {
   skill: SkillRow
   all: SkillRow[]
   onOpenNote: (id: string) => void
   /** Silme/birleştirme sonrası seçimi güncellemek için */
   onChanged: (nextId?: string) => void
+  /** Bu beceriyi şimdi tekrar et */
+  onReview: (id: string) => void
 }): React.JSX.Element {
   const update = useStore((s) => s.updateSkill)
   const remove = useStore((s) => s.deleteSkill)
@@ -227,6 +315,9 @@ export function SkillDetail({
     () => skill.evidence.slice().sort((a, b) => b.date.localeCompare(a.date)),
     [skill.evidence]
   )
+  const roots = useMemo(() => rootCauses(skill, all), [skill, all])
+  const today = todayKey()
+  const due = skillDue(skill, today)
 
   const onDelete = async (): Promise<void> => {
     if (await confirm({ title: 'Beceri silinsin mi?', message: `"${skill.name}" ve kanıtları silinir. Sorulardaki bağlantısı da kalkar.`, confirmText: 'Sil', danger: true })) {
@@ -256,6 +347,25 @@ export function SkillDetail({
           />
         </div>
 
+        {roots.length > 0 && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/5 px-3.5 py-2.5 text-[13px] leading-relaxed">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warning" />
+            <span className="text-muted">
+              Kök neden olabilir: bu beceri{' '}
+              {roots.map((r, i) => (
+                <span key={r.id}>
+                  {i > 0 && ', '}
+                  <button type="button" className="font-medium text-text underline decoration-warning/50 underline-offset-2 hover:decoration-warning" onClick={() => onChanged(r.id)}>
+                    {r.name}
+                  </button>{' '}
+                  <span className="tabular text-subtle">({r.strength.score})</span>
+                </span>
+              ))}{' '}
+              becerisine dayanıyor ve o henüz oturmadı. Önce onu güçlendirmek bu beceriyi de kolaylaştırır.
+            </span>
+          </div>
+        )}
+
         <div className="mt-6 flex flex-wrap items-end justify-between gap-x-10 gap-y-4">
           <div className="flex items-end gap-5">
             <div>
@@ -278,14 +388,20 @@ export function SkillDetail({
             {[
               ['Eksik / zorlanma', skill.strength.misses],
               ['Başarı', skill.strength.wins],
-              ['Son', skill.strength.lastSeen ? relativeDay(skill.strength.lastSeen) : '—']
+              ['Son', skill.strength.lastSeen ? relativeDay(skill.strength.lastSeen) : '—'],
+              ['Sonraki tekrar', due ? 'Bugün' : skill.nextReview ? formatDate(skill.nextReview, false) : '—']
             ].map(([k, v]) => (
               <div key={k as string}>
                 <dt className="text-subtle">{k}</dt>
-                <dd className="mt-1 text-sm font-medium text-text">{v}</dd>
+                <dd className={cn('mt-1 text-sm font-medium text-text', k === 'Sonraki tekrar' && due && 'text-warning')}>{v}</dd>
               </div>
             ))}
           </dl>
+        </div>
+        <div className="mt-5">
+          <Button variant={due ? 'primary' : 'outline'} size="sm" icon={<Play size={13} />} onClick={() => onReview(skill.id)}>
+            {due ? 'Şimdi tekrar et' : 'Yine de tekrar et'}
+          </Button>
         </div>
       </div>
 
@@ -323,6 +439,8 @@ export function SkillDetail({
         )}
       </Section>
 
+      <Foundations skill={skill} all={all} onSelect={(id) => onChanged(id)} />
+
       {/* Kanıtlar */}
       <Section
         title={`Kanıtlar · ${evidence.length}`}
@@ -355,7 +473,9 @@ export function SkillDetail({
                       </>
                     )}
                     {e.source === 'manuel' && <span className="text-subtle">· elle eklendi</span>}
-                    {e.source === 'tekrar' && <span className="text-subtle">· tekrar</span>}
+                    {e.source === 'tekrar' && <span className="text-subtle">· soru tekrarı</span>}
+                    {e.source === 'beceri' && <span className="text-subtle">· beceri tekrarı</span>}
+                    {e.source === 'pratik' && <span className="text-subtle">· mini ders pratiği</span>}
                   </div>
                   {e.detail && <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-text">{e.detail}</p>}
                   {e.noteId && <NoteLink noteId={e.noteId} onOpen={onOpenNote} />}
@@ -391,7 +511,8 @@ export function SkillDetail({
         all={all}
         onClose={() => setMerging(false)}
         onPick={async (target) => {
-          if (await confirm({ title: 'Birleştirilsin mi?', message: `"${skill.name}", "${target.name}" içine taşınacak.`, confirmText: 'Birleştir' })) {
+          if (await confirm({ title: 'Birleştirilsin mi?', message: `"${skill.name}", "${target.name}" içine taşınacak. Sonra geri alabilirsin.`, confirmText: 'Birleştir' })) {
+            useStore.getState().snapshotBrain(`"${skill.name}" birleştirildi`)
             merge(target.id, skill.id)
             setMerging(false)
             onChanged(target.id)

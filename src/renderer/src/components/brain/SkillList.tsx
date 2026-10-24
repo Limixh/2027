@@ -1,5 +1,5 @@
 import { Network } from 'lucide-react'
-import { STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
+import { skillDue, STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
 import { relativeDay } from '@/lib/date'
 import { cn } from '@/components/ui'
 import { isCross, type SkillRow } from './shared'
@@ -33,7 +33,14 @@ export function SkillList({
                 className={cn('absolute left-0 top-3 h-[calc(100%-1.5rem)] w-0.5 rounded-full transition-opacity', active ? 'opacity-100' : 'opacity-0')}
                 style={{ background: color }}
               />
-              <div className="line-clamp-2 text-[13px] font-medium leading-snug text-text">{s.name}</div>
+              <div className="flex items-start gap-2">
+                <div className="line-clamp-2 min-w-0 flex-1 text-[13px] font-medium leading-snug text-text">{s.name}</div>
+                {skillDue(s) && (
+                  <span className="mt-0.5 shrink-0 rounded bg-warning/15 px-1.5 text-[10px] font-medium text-warning" title="Beceri tekrarı zamanı">
+                    tekrar
+                  </span>
+                )}
+              </div>
               <div className="mt-2 flex items-center gap-2.5">
                 <div className="h-[3px] flex-1 overflow-hidden rounded-full bg-surface-3">
                   <div className="h-full rounded-full transition-all" style={{ width: `${Math.max(3, s.strength.score)}%`, background: color }} />

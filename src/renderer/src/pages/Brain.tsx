@@ -1,24 +1,58 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Brain as BrainIcon, Loader2, RefreshCw, Search, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Brain as BrainIcon, GitMerge, Loader2, Play, RefreshCw, Search, Sparkles, Undo2 } from 'lucide-react'
+import type { BrainPlan } from '../../../shared/types'
 import { Button, Input, Segmented, cn, confirm, toast } from '@/components/ui'
-import { sortedSkills } from '@/lib/brain'
-import { backfillSkills, consolidateBrain, notesNeedingSkills } from '@/lib/brainSync'
+import { reviewQueue, skillDue, sortedSkills } from '@/lib/brain'
+import { backfillSkills, consolidateBrain, needsApproval, notesNeedingSkills } from '@/lib/brainSync'
+import { relativeDay } from '@/lib/date'
 import { useNav } from '@/lib/nav'
 import { useStore } from '@/lib/store'
 import { NoteDetail } from '@/components/mistakes/NoteDetail'
 import { BrainGraph } from '@/components/brain/BrainGraph'
+import { PlanReview } from '@/components/brain/PlanReview'
 import { SkillDetail } from '@/components/brain/SkillDetail'
 import { SkillList } from '@/components/brain/SkillList'
+import { SkillReview } from '@/components/brain/SkillReview'
 import { fold, isCross, type SkillRow } from '@/components/brain/shared'
 
-type Filter = 'all' | 'zayif' | 'gelisiyor' | 'guclu' | 'cross'
+type Filter = 'all' | 'due' | 'zayif' | 'gelisiyor' | 'guclu' | 'cross'
 const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'Tümü' },
+  { id: 'due', label: 'Tekrar zamanı' },
   { id: 'zayif', label: 'Zayıf' },
   { id: 'gelisiyor', label: 'Gelişiyor' },
   { id: 'guclu', label: 'Oturdu' },
   { id: 'cross', label: 'Birden çok konu' }
 ]
+
+/** Son birleştirme / silme / düzenlemeyi geri al */
+function UndoButton(): React.JSX.Element | null {
+  const undo = useStore((s) => s.data.brainMeta?.undo)
+  if (!undo) return null
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      icon={<Undo2 size={13} />}
+      title={`${undo.label} · ${relativeDay(undo.at.slice(0, 10))}`}
+      onClick={async () => {
+        if (
+          await confirm({
+            title: 'Geri alınsın mı?',
+            message: `“${undo.label}” işleminden önceki hafızaya dönülür. O zamandan beri eklenen kanıtlar da geri gider.`,
+            confirmText: 'Geri al',
+            danger: false
+          })
+        ) {
+          useStore.getState().undoBrain()
+          toast('Geri alındı', 'info')
+        }
+      }}
+    >
+      Geri al
+    </Button>
+  )
+}
 
 function SyncButton({ prominent }: { prominent?: boolean }): React.JSX.Element | null {
   const notes = useStore((s) => s.data.mistakeNotes)
@@ -57,7 +91,7 @@ function SyncButton({ prominent }: { prominent?: boolean }): React.JSX.Element |
   )
 }
 
-function TidyButton(): React.JSX.Element | null {
+function TidyButton({ onPlan }: { onPlan: (p: BrainPlan) => void }): React.JSX.Element | null {
   const count = useStore((s) => s.data.skills.length)
   const [busy, setBusy] = useState(false)
   if (count < 2) return null
@@ -66,8 +100,12 @@ function TidyButton(): React.JSX.Element | null {
     try {
       const r = await consolidateBrain()
       if (!r) return
-      const parts = [r.merged && `${r.merged} kopya birleşti`, r.renamed && `${r.renamed} ad netleşti`, r.areas && `${r.areas} alan`, r.described && `${r.described} tanım`].filter(Boolean)
-      toast(parts.length ? `Hafıza düzenlendi: ${parts.join(', ')}` : 'Hafıza zaten düzenli')
+      const a = r.applied
+      const parts = [a.prereqs && `${a.prereqs} önkoşul bağı`, a.areas && `${a.areas} alan`, a.described && `${a.described} tanım`].filter(Boolean)
+      if (needsApproval(r.pending)) {
+        if (parts.length) toast(`Eklendi: ${parts.join(', ')}`, 'info')
+        onPlan(r.pending)
+      } else toast(parts.length ? `Hafıza düzenlendi: ${parts.join(', ')}` : 'Hafıza zaten düzenli')
     } catch {
       toast('Hafıza düzenlenemedi', 'error')
     } finally {
@@ -81,7 +119,7 @@ function TidyButton(): React.JSX.Element | null {
       disabled={busy}
       icon={busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
       onClick={() => void run()}
-      title="AI aynı beceriyi anlatan kopyaları birleştirir, adları netleştirir, alan ve tanım ekler"
+      title="AI beceriler arasındaki önkoşul bağlarını, alanları ve tanımları ekler; kopya birleştirme ve ad önerilerini onayına sunar"
     >
       {busy ? 'Düzenleniyor…' : 'Hafızayı düzenle'}
     </Button>
@@ -98,6 +136,10 @@ export default function Brain(): React.JSX.Element {
   const [q, setQ] = useState('')
   const [selected, setSelected] = useState<string | undefined>(typeof paramSkill === 'string' ? paramSkill : undefined)
   const [noteId, setNoteId] = useState<string | null>(null)
+  const [review, setReview] = useState<string[] | null>(null)
+  const [plan, setPlan] = useState<BrainPlan | null>(null)
+  const pending = data.brainMeta?.pending
+  const closeReview = useCallback(() => setReview(null), [])
 
   useEffect(() => {
     if (typeof paramSkill === 'string') {
@@ -112,6 +154,7 @@ export default function Brain(): React.JSX.Element {
     return all.filter((s) => {
       if (f && !fold(s.name + ' ' + (s.description ?? '') + ' ' + (s.area ?? '')).includes(f)) return false
       if (filter === 'cross') return isCross(s)
+      if (filter === 'due') return skillDue(s)
       if (filter !== 'all') return s.strength.status === filter
       return true
     })
@@ -121,6 +164,8 @@ export default function Brain(): React.JSX.Element {
   const weak = all.filter((s) => s.strength.status === 'zayif').length
   const cross = all.filter(isCross).length
   const pendingNotes = notesNeedingSkills().length
+  const queue = useMemo(() => reviewQueue(data, 5), [data])
+  const dueCount = all.filter((s) => skillDue(s)).length
 
   if (!all.length) {
     return (
@@ -141,6 +186,7 @@ export default function Brain(): React.JSX.Element {
           ))}
         </ol>
         <div className="mt-9 flex items-center gap-3">
+          <UndoButton />
           {pendingNotes > 0 && <SyncButton prominent />}
           <Button variant={pendingNotes > 0 ? 'ghost' : 'primary'} onClick={() => go('mistakes')}>
             Hata Defteri’ne git
@@ -162,10 +208,41 @@ export default function Brain(): React.JSX.Element {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <TidyButton />
+            <UndoButton />
+            <TidyButton onPlan={setPlan} />
             <SyncButton />
           </div>
         </div>
+
+        {queue.length > 0 && (
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-accent/25 bg-accent/5 px-5 py-4">
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">
+                Bugünün beceri tekrarı · <span className="tabular">{queue.length}</span> beceri
+                {dueCount > queue.length && <span className="font-normal text-muted"> (sırada {dueCount})</span>}
+              </div>
+              <p className="mt-1 truncate text-xs text-muted">
+                {queue.map((s) => s.name).join(' · ')} — her biri için 2 yeni soru, kök nedenler önce.
+              </p>
+            </div>
+            <Button variant="primary" icon={<Play size={14} />} onClick={() => setReview(queue.map((s) => s.id))}>
+              Tekrara başla
+            </Button>
+          </div>
+        )}
+
+        {needsApproval(pending) && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border px-4 py-3 text-xs text-muted">
+            <span className="inline-flex items-center gap-2">
+              <GitMerge size={14} className="text-accent" />
+              Hafıza düzenleme önerisi bekliyor:{' '}
+              {[pending?.merge?.length && `${pending.merge.length} birleştirme`, pending?.rename?.length && `${pending.rename.length} yeni ad`].filter(Boolean).join(', ')}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setPlan(pending!)}>
+              İncele
+            </Button>
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-border pb-4">
           <Segmented
             size="sm"
@@ -211,6 +288,7 @@ export default function Brain(): React.JSX.Element {
                 all={all}
                 onOpenNote={setNoteId}
                 onChanged={(next) => setSelected(next)}
+                onReview={(id) => setReview([id])}
               />
             ) : (
               <p className="py-20 text-center text-sm text-subtle">Soldan bir beceri seç.</p>
@@ -230,6 +308,9 @@ export default function Brain(): React.JSX.Element {
           />
         </div>
       )}
+
+      {review && <SkillReview ids={review} onClose={closeReview} />}
+      {plan && <PlanReview plan={plan} all={all} onClose={() => setPlan(null)} />}
 
       {noteId && (
         <NoteDetail

@@ -1,8 +1,8 @@
 {
-  "version": "1.6.0",
-  "file": "app-1.6.0.json.gz",
-  "sha256": "96ac19202135d9301b3a0ac3d5150e90c61db74e2a1bc84d30a086184a8d29a1",
+  "version": "1.7.0",
+  "file": "app-1.7.0.json.gz",
+  "sha256": "5f8c265f874a290f64b169bf2115c8e42e53d3d35a0e9f3875cfa0394f15fa3c",
   "minShell": "1.1.0",
-  "notes": "Telefondan toplu soru yükleme ve Toplu giriş ekranı; analizlerde modelin adı görünüyor",
+  "notes": "İkinci Beyin: beceri tekrarı, önkoşullar ve kök neden, onaylı hafıza düzenleme ve geri alma, toplu analiz, Genel Bakış odak kartı",
   "date": "2026-10-24"
 }

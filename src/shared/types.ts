@@ -163,6 +163,14 @@ export interface Skill {
   lesson?: string
   /** Mini dersi yazan model */
   lessonModel?: string
+  /** Mini ders pratiğinin sonucu kaydedildi mi (aynı derse iki kez kanıt yazılmasın) */
+  lessonPracticeAt?: string
+  /** Bu becerinin dayandığı (önce oturması gereken) beceriler */
+  prereqIds?: string[]
+  /** Beceri tekrarı: bir sonraki tekrar günü (YYYY-MM-DD) */
+  nextReview?: string
+  /** Üst üste başarılı beceri tekrarı sayısı (aralığı belirler) */
+  reviewStreak?: number
   createdAt: string
   updatedAt: string
 }
@@ -176,7 +184,27 @@ export interface SkillEvidence {
   detail?: string
   noteId?: string
   topicId?: string
-  source: 'ai' | 'tekrar' | 'manuel'
+  /** ai: soru analizi · tekrar: hata defteri tekrarı · beceri: beceri tekrarı · pratik: mini ders pratiği · manuel: elle */
+  source: 'ai' | 'tekrar' | 'manuel' | 'beceri' | 'pratik'
+}
+
+/** Hafıza düzenleme önerisi (AI); kullanıcı onaylayınca uygulanır */
+export interface BrainPlan {
+  merge?: { into: string; from: string[]; reason?: string }[]
+  rename?: { id: string; name: string }[]
+  area?: { id: string; area: string }[]
+  describe?: { id: string; description: string }[]
+  /** id becerisi needs becerilerine dayanır */
+  prereq?: { id: string; needs: string[] }[]
+}
+
+/** Geri alma için hafızanın önceki hali */
+export interface BrainSnapshot {
+  at: string
+  label: string
+  skills: Skill[]
+  /** notId -> skillIds */
+  noteSkills: Record<string, string[]>
 }
 
 /** Soru pratiği seti: ör. 20 paragraf 28 dk, 17D 2Y 1B */
@@ -307,7 +335,14 @@ export interface AppData {
   practiceSets: PracticeSet[]
   skills: Skill[]
   /** İkinci Beyin bakım bilgisi */
-  brainMeta?: { lastConsolidatedAt?: string; lastConsolidatedCount?: number }
+  brainMeta?: {
+    lastConsolidatedAt?: string
+    lastConsolidatedCount?: number
+    /** Otomatik bakımın bulduğu, onay bekleyen birleştirme / ad önerileri */
+    pending?: BrainPlan
+    /** Son geri alınabilir işlem */
+    undo?: BrainSnapshot
+  }
 }
 
 /** Sohbete eklenen dosya (userData/attachments altında saklanır) */

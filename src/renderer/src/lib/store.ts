@@ -167,6 +167,15 @@ interface Store {
   /** source becerisini target'a katar (kanıtlar, konular ve bağlı notlar taşınır) */
   mergeSkills(targetId: string, sourceId: string): void
   addSkillEvidence(skillId: string, ev: Omit<SkillEvidence, 'id'>): void
+  /**
+   * Beceri tekrarı / mini ders pratiği sonucu: tek özet kanıt yazar ve bir sonraki tekrarı planlar.
+   * Hepsini kendi çözdüyse aralık uzar (3 → 7 → 14 → 30 gün), kısmen 2 gün, hiç 1 gün sonra.
+   */
+  recordSkillPractice(skillId: string, r: { solved: number; total: number; source: 'beceri' | 'pratik'; detail?: string }): void
+  /** Hafızanın şimdiki halini geri alma noktası olarak sakla */
+  snapshotBrain(label: string): void
+  /** Son geri alma noktasına dön */
+  undoBrain(): void
 
   addCountdown(c: Omit<Countdown, 'id'>): void
   deleteCountdown(id: string): void
@@ -510,9 +519,13 @@ export const useStore = create<Store>((set, get) => {
       mutate((d) => ({ ...d, skills: d.skills.map((s) => (s.id === id ? { ...s, ...patch, updatedAt: now() } : s)) }))
     },
     deleteSkill(id) {
+      const name = get().data.skills.find((s) => s.id === id)?.name ?? ''
+      get().snapshotBrain(`"${name}" silindi`)
       mutate((d) => ({
         ...d,
-        skills: d.skills.filter((s) => s.id !== id),
+        skills: d.skills
+          .filter((s) => s.id !== id)
+          .map((s) => (s.prereqIds?.includes(id) ? { ...s, prereqIds: s.prereqIds.filter((x) => x !== id) } : s)),
         mistakeNotes: d.mistakeNotes.map((m) => (m.skillIds?.includes(id) ? { ...m, skillIds: m.skillIds.filter((x) => x !== id) } : m))
       }))
     },
@@ -532,11 +545,19 @@ export const useStore = create<Store>((set, get) => {
           note: [t.note, src.note].filter(Boolean).join('\n\n') || undefined,
           description: t.description || src.description,
           area: t.area || src.area,
+          prereqIds: [...new Set([...(t.prereqIds ?? []), ...(src.prereqIds ?? [])])].filter((x) => x !== targetId && x !== sourceId),
+          // Hangisinin tekrarı daha yakınsa o
+          nextReview: [t.nextReview, src.nextReview].filter(Boolean).sort()[0],
           updatedAt: now()
         }
+        // Başka becerilerin önkoşullarında source → target
+        const fixPrereq = (s: Skill): Skill =>
+          s.prereqIds?.includes(sourceId)
+            ? { ...s, prereqIds: [...new Set(s.prereqIds.map((x) => (x === sourceId ? targetId : x)))].filter((x) => x !== s.id) }
+            : s
         return {
           ...d,
-          skills: d.skills.filter((s) => s.id !== sourceId).map((s) => (s.id === targetId ? merged : s)),
+          skills: d.skills.filter((s) => s.id !== sourceId).map((s) => (s.id === targetId ? merged : fixPrereq(s))),
           mistakeNotes: d.mistakeNotes.map((m) =>
             m.skillIds?.includes(sourceId) ? { ...m, skillIds: [...new Set(m.skillIds.map((x) => (x === sourceId ? targetId : x)))] } : m
           )
@@ -556,6 +577,45 @@ export const useStore = create<Store>((set, get) => {
               }
             : s
         )
+      }))
+    },
+    recordSkillPractice(skillId, r) {
+      const s = get().data.skills.find((k) => k.id === skillId)
+      if (!s || r.total <= 0) return
+      const all = r.solved >= r.total
+      const kind: SkillEvidence['kind'] = all ? 'basari' : r.solved > 0 ? 'zayif' : 'eksik'
+      const label = r.source === 'beceri' ? 'Beceri tekrarı' : 'Mini ders pratiği'
+      const streak = all ? (s.reviewStreak ?? 0) + 1 : 0
+      const next = addDays(todayKey(), all ? [3, 7, 14, 30][Math.min(streak - 1, 3)] : r.solved > 0 ? 2 : 1)
+      get().addSkillEvidence(skillId, {
+        date: todayKey(),
+        kind,
+        detail: `${label}: ${r.total} sorudan ${r.solved} tanesini kendi çözdü${r.detail ? ` — ${r.detail}` : ''}`,
+        source: r.source
+      })
+      get().updateSkill(skillId, {
+        reviewStreak: streak,
+        nextReview: next,
+        ...(r.source === 'pratik' ? { lessonPracticeAt: now() } : {})
+      })
+    },
+    snapshotBrain(label) {
+      const d = get().data
+      const noteSkills: Record<string, string[]> = {}
+      for (const m of d.mistakeNotes) if (m.skillIds?.length) noteSkills[m.id] = m.skillIds
+      get().setBrainMeta({ undo: { at: now(), label, skills: d.skills, noteSkills } })
+    },
+    undoBrain() {
+      const u = get().data.brainMeta?.undo
+      if (!u) return
+      mutate((d) => ({
+        ...d,
+        skills: u.skills,
+        mistakeNotes: d.mistakeNotes.map((m) => {
+          const ids = u.noteSkills[m.id]
+          return ids || m.skillIds ? { ...m, skillIds: ids } : m
+        }),
+        brainMeta: { ...(d.brainMeta ?? {}), undo: undefined }
       }))
     },
 

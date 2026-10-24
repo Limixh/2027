@@ -15,7 +15,8 @@ interface GNode extends SimulationNodeDatum {
   ring?: string
   subjectId?: string
 }
-type GLink = SimulationLinkDatum<GNode>
+/** topic: beceri–konu · prereq: önkoşul → beceri (ok) */
+type GLink = SimulationLinkDatum<GNode> & { kind?: 'prereq' }
 interface View {
   x: number
   y: number
@@ -52,7 +53,7 @@ export function BrainGraph({
   const drag = useRef<{ node?: GNode; sx: number; sy: number; vx: number; vy: number; moved: boolean } | null>(null)
 
   // Veri imzası: yalnızca yapı değişince simülasyon yeniden kurulur
-  const sig = skills.map((s) => `${s.id}:${s.topicIds.join(',')}:${s.evidence.length}:${s.strength.status}`).join('|')
+  const sig = skills.map((s) => `${s.id}:${s.topicIds.join(',')}:${s.evidence.length}:${s.strength.status}:${(s.prereqIds ?? []).join(',')}`).join('|')
 
   useEffect(() => {
     const el = wrap.current
@@ -106,6 +107,9 @@ export function BrainGraph({
         links.push({ source: 's:' + s.id, target: tn.id })
       }
     }
+    // Önkoşul okları (yalnızca ikisi de görünürse)
+    const shown = new Set(skills.map((s) => s.id))
+    for (const s of skills) for (const p of s.prereqIds ?? []) if (shown.has(p)) links.push({ source: 's:' + p, target: 's:' + s.id, kind: 'prereq' })
     // Dersler için çember üzerinde çapa noktaları: aynı dersin konuları kümelenir, köprü beceriler arada kalır
     const subs = [...new Set(nodes.filter((n) => n.type === 'topic').map((n) => n.subjectId as string))]
     const R = subs.length > 1 ? 150 : 0
@@ -113,7 +117,13 @@ export function BrainGraph({
 
     sim.current?.stop()
     const s = forceSimulation<GNode>(nodes)
-      .force('link', forceLink<GNode, GLink>(links).id((d) => d.id).distance(120).strength(0.45))
+      .force(
+        'link',
+        forceLink<GNode, GLink>(links)
+          .id((d) => d.id)
+          .distance((l) => (l.kind === 'prereq' ? 170 : 120))
+          .strength((l) => (l.kind === 'prereq' ? 0.12 : 0.45))
+      )
       .force('charge', forceManyBody<GNode>().strength((d) => (d.type === 'skill' ? -520 : -160)))
       .force('collide', forceCollide<GNode>().radius((d) => d.r + (d.type === 'skill' ? Math.min(90, 16 + d.label.length * 2.6) : 34)).strength(0.9))
       .force('x', forceX<GNode>((d) => (d.subjectId ? anchor.get(d.subjectId)?.x ?? 0 : 0)).strength((d) => (d.type === 'topic' ? 0.16 : 0.035)))
@@ -240,12 +250,40 @@ export function BrainGraph({
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#brain-dots)" />
+        <defs>
+          <marker id="brain-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 1 L9 5 L0 9 z" fill="rgb(var(--accent))" />
+          </marker>
+        </defs>
         <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
           {links.map((l, i) => {
             const a = l.source as GNode
             const b = l.target as GNode
             if (a.x == null || b.x == null) return null
             const on = !focusId || ((a.id === focusId || b.id === focusId) && true)
+            if (l.kind === 'prereq') {
+              // Ok, hedef düğümün kenarında bitsin
+              const dx = (b.x ?? 0) - a.x
+              const dy = (b.y ?? 0) - (a.y ?? 0)
+              const len = Math.hypot(dx, dy) || 1
+              const ex = (b.x ?? 0) - (dx / len) * (b.r + 4)
+              const ey = (b.y ?? 0) - (dy / len) * (b.r + 4)
+              return (
+                <line
+                  key={i}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={ex}
+                  y2={ey}
+                  stroke="rgb(var(--accent))"
+                  strokeOpacity={focusId ? (on ? 0.9 : 0.08) : 0.55}
+                  strokeWidth={1.3}
+                  strokeDasharray="5 4"
+                  markerEnd="url(#brain-arrow)"
+                  style={{ transition: 'stroke-opacity .2s' }}
+                />
+              )
+            }
             const sk = a.type === 'skill' ? a : b
             return (
               <line
@@ -318,6 +356,10 @@ export function BrainGraph({
         <span className="inline-flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-subtle/60" />
           Konu
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-4 border-t border-dashed border-accent" />
+          Önkoşul → beceri
         </span>
       </div>
 

@@ -52,6 +52,25 @@ Hangi soru tiplerinde bu becerinin devreye girdiğini, işaretlerini söyle.${cr
 Pratik sorularından hemen sonra tek başına bir satırda tam olarak ${SEP} yaz; bunun altına 3 sorunun cevaplarını kısa çözüm adımlarıyla ver.`
 }
 
+/** Pratik sorularının sonucu: kaçını kendi çözdü → beceriye kanıt + sonraki tekrar */
+function PracticeResult({ skill }: { skill: SkillRow }): React.JSX.Element {
+  const record = useStore((s) => s.recordSkillPractice)
+  if (skill.lessonPracticeAt)
+    return <p className="mt-4 text-xs text-subtle">Pratik sonucu kaydedildi. Yeni ders oluşturursan yeniden kaydedebilirsin.</p>
+  return (
+    <div className="mt-4 rounded-lg bg-surface-2 px-3.5 py-3">
+      <p className="text-xs text-muted">3 pratik sorusundan kaçını çözüme bakmadan kendin çözdün?</p>
+      <div className="mt-2 flex gap-1.5">
+        {[0, 1, 2, 3].map((k) => (
+          <Button key={k} variant="outline" size="sm" onClick={() => record(skill.id, { solved: k, total: 3, source: 'pratik' })}>
+            {k} / 3
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function Lesson({ skill }: { skill: SkillRow }): React.JSX.Element {
   const update = useStore((s) => s.updateSkill)
   const notes = useStore((s) => s.data.mistakeNotes)
@@ -73,7 +92,7 @@ export function Lesson({ skill }: { skill: SkillRow }): React.JSX.Element {
         if (n?.text) noteTexts[n.id] = n.text
       }
       const { text: full, model } = await askAiWithModel({ system: TUTOR_SYSTEM, prompt: lessonPrompt(skill, noteTexts), onText: setLive })
-      update(skill.id, { lesson: full.trim(), lessonModel: model })
+      update(skill.id, { lesson: full.trim(), lessonModel: model, lessonPracticeAt: undefined })
       setLive('')
     } catch (e) {
       setError(e instanceof AiError ? e.message : 'Ders oluşturulamadı')
@@ -117,6 +136,7 @@ export function Lesson({ skill }: { skill: SkillRow }): React.JSX.Element {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{answers}</ReactMarkdown>
                 </div>
               )}
+              {show && !busy && <PracticeResult skill={skill} />}
             </div>
           )}
         </div>

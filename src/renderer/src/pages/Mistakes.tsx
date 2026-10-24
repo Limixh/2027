@@ -14,6 +14,7 @@ import { ReviewMode } from '@/components/mistakes/ReviewMode'
 import { NoteDetail } from '@/components/mistakes/NoteDetail'
 import { PhoneUploadModal } from '@/components/phone/PhoneUpload'
 import { InboxWizard } from '@/components/mistakes/InboxWizard'
+import { BatchAnalyze } from '@/components/mistakes/BatchAnalyze'
 
 type StatusFilter = 'all' | 'open' | 'due' | 'done'
 
@@ -103,6 +104,7 @@ export default function Mistakes(): React.JSX.Element {
         description="Yanlış yaptığın soruları ekle, AI ile analiz et, farklı günlerde tekrar çöz."
         actions={
           <>
+            <BatchAnalyze />
             {inboxCount > 0 && (
               <Button variant="outline" icon={<Inbox size={14} />} onClick={() => setWizard(true)} title="Telefondan gelen soruların bilgilerini sırayla gir">
                 Toplu giriş

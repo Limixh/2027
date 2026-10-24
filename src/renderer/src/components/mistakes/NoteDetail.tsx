@@ -7,12 +7,11 @@ import { Badge, Button, Modal, Select, Textarea, cn, toast } from '@/components/
 import { SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
 import { MISTAKE_KIND_LABEL } from '@/lib/exam'
 import { formatDate, todayKey } from '@/lib/date'
-import { AiError, TUTOR_SYSTEM, analysisPrompt, askAiWithModel, similarPrompt, splitNoteMeta } from '@/lib/aiRunner'
-import { resolveTopic } from '@/lib/aiActions'
+import { AiError, TUTOR_SYSTEM, askAiWithModel, similarPrompt, splitNoteMeta } from '@/lib/aiRunner'
+import { analyzeNote } from '@/lib/analyzeNote'
 import { uid } from '@/lib/id'
 import { useStore } from '@/lib/store'
-import { memoryForPrompt, skillStrength, STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
-import { maybeConsolidate } from '@/lib/brainSync'
+import { skillStrength, STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
 import { useNav } from '@/lib/nav'
 import { KINDS } from './MistakeModal'
 import { NoteImage } from './NoteImage'
@@ -98,42 +97,7 @@ export function NoteDetail({
     setError('')
     setLive('')
     try {
-      const { text: full, model } = await askAiWithModel({
-        system: TUTOR_SYSTEM,
-        prompt: analysisPrompt({
-          subject: subject?.name ?? 'YKS',
-          topic: topic?.name,
-          hasAttempt: (note.attemptImages?.length ?? 0) > 0,
-          note: note.text || undefined,
-          correctAnswer: note.correctAnswer,
-          myAnswer: note.myAnswer,
-          usedSolution: note.usedSolution || note.kind === 'cozum',
-          usedHint: note.usedHint,
-          hintSeen: note.hintSeen,
-          comments: note.comments,
-          memory: memoryForPrompt(useStore.getState().data, { subjectId: note.subjectId, topicId: note.topicId }) || undefined
-        }),
-        attachments: imgs.length ? imgs : undefined,
-        onText: setLive
-      })
-      const { body, meta } = splitNoteMeta(full)
-      const patch: Partial<MistakeNote> = { aiAnalysis: body, aiAnalyzedAt: new Date().toISOString(), aiModel: model }
-      const cur = useStore.getState().data.mistakeNotes.find((m) => m.id === id)
-      if (meta && cur) {
-        if (meta.kind && (KINDS as string[]).includes(meta.kind)) patch.kind = meta.kind as MistakeKind
-        if (meta.lesson && !cur.lesson) patch.lesson = meta.lesson
-        if (!cur.topicId && meta.topic) {
-          const t = resolveTopic(cur.subjectId, meta.topic)
-          if (t) patch.topicId = t
-        }
-        if (meta.summary && !cur.text.trim()) patch.text = meta.summary
-      }
-      update(id, patch)
-      // (konu güncellendikten sonra) İkinci Beyin: becerileri hafızaya işle (farklı konulardaki aynı beceri burada buluşur)
-      if (meta?.skills?.length) {
-        useStore.getState().applySkillAnalysis(id, meta.skills.filter((x) => x && typeof x.name === 'string'))
-        void maybeConsolidate()
-      }
+      await analyzeNote(id, setLive)
       setLive('')
     } catch (e) {
       setError(errText(e))

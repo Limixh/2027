@@ -82,7 +82,8 @@ export function memoryForPrompt(data: AppData, opts: { subjectId?: string; topic
         return `${e.date} ${e.kind}${e.topicId ? ` (${topicLabel(e.topicId)})` : ''}${e.detail ? `: ${e.detail.slice(0, 120)}` : ''}${note?.text ? ` [soru notu: ${note.text.slice(0, 80)}]` : ''}`
       })
       .join(' | ')
-    return `- id=${s.id} · "${s.name}"${s.area ? ` · alan: ${s.area}` : ''} · ${STATUS_LABEL[s.strength.status]} (${s.strength.score}/100)${s.description ? ` · tanım: ${s.description.slice(0, 140)}` : ''} · konular: ${s.topicIds.map(topicLabel).join(', ') || '-'}${last ? ` · son kanıtlar: ${last}` : ''}`
+    const needs = (s.prereqIds ?? []).map((id) => list.find((x) => x.id === id)?.name).filter(Boolean)
+    return `- id=${s.id} · "${s.name}"${s.area ? ` · alan: ${s.area}` : ''} · ${STATUS_LABEL[s.strength.status]} (${s.strength.score}/100)${s.description ? ` · tanım: ${s.description.slice(0, 140)}` : ''} · konular: ${s.topicIds.map(topicLabel).join(', ') || '-'}${needs.length ? ` · dayandığı beceriler: ${needs.join(', ')}` : ''}${last ? ` · son kanıtlar: ${last}` : ''}`
   })
   if (rest.length)
     lines.push(`\nDiğer beceriler (kısa katalog — bunlardan biri uyuyorsa onun id'sini kullan):\n${rest.map((s) => `- ${s.id} | ${s.name}${s.area ? ` | ${s.area}` : ''}`).join('\n')}`)
@@ -92,3 +93,60 @@ export function memoryForPrompt(data: AppData, opts: { subjectId?: string; topic
 /** Bir becerinin "tekrar zamanı" geldi mi: zayıfsa ve 3 günden uzun süredir dokunulmadıysa */
 export const skillNeedsWork = (s: Skill & { strength: SkillStrength }): boolean =>
   s.strength.status === 'zayif' && (!s.strength.lastSeen || diffDays(s.strength.lastSeen, todayKey()) >= 3)
+
+type Row = Skill & { strength: SkillStrength }
+
+/**
+ * Beceri tekrarı zamanı geldi mi: planlanmış tekrarı bugün ya da geçmişteyse;
+ * hiç tekrar edilmemişse oturmamış (zayıf / gelişiyor) her beceri sıradadır.
+ */
+export function skillDue(s: Row, today = todayKey()): boolean {
+  if (s.nextReview) return s.nextReview <= today
+  return s.strength.status !== 'guclu'
+}
+
+/**
+ * Bu becerinin zayıf temelleri: önkoşullardan bu beceriden daha zayıf ya da "Zayıf" olanlar.
+ * Bunlar oturmadan bu beceri de oturmaz — önce bunlara çalışılmalı.
+ */
+export function rootCauses(s: Row, all: Row[]): Row[] {
+  return (s.prereqIds ?? [])
+    .map((id) => all.find((x) => x.id === id))
+    .filter((p): p is Row => !!p && (p.strength.status === 'zayif' || p.strength.score < s.strength.score))
+    .sort((a, b) => a.strength.score - b.strength.score)
+}
+
+/** Bu beceriye dayanan (onu önkoşul alan) beceriler */
+export const dependents = (s: Skill, all: Row[]): Row[] => all.filter((x) => x.prereqIds?.includes(s.id))
+
+/**
+ * Bugünün beceri tekrarı sırası: önce başka zayıf becerilerin temeli olanlar (kök neden), sonra en zayıflar.
+ * Temeli zayıf bir beceri sıradaysa temeli de (henüz sırada olmasa bile) başa eklenir.
+ */
+export function reviewQueue(data: AppData, limit = 5): Row[] {
+  const all = sortedSkills(data)
+  const due = all.filter((s) => skillDue(s))
+  const ids = new Set(due.map((s) => s.id))
+  for (const s of due) for (const r of rootCauses(s, all)) ids.add(r.id)
+  const rootScore = (s: Row): number => all.filter((x) => ids.has(x.id) && x.prereqIds?.includes(s.id)).length
+  return all
+    .filter((s) => ids.has(s.id))
+    .sort((a, b) => rootScore(b) - rootScore(a) || a.strength.score - b.strength.score)
+    .slice(0, limit)
+}
+
+/** Genel Bakış için odak: kök nedenler önce, sonra tekrarı gelen en zayıflar */
+export function focusSkills(data: AppData, n = 3): { skill: Row; reason: string }[] {
+  const all = sortedSkills(data)
+  const out: { skill: Row; reason: string }[] = []
+  const add = (skill: Row, reason: string): void => {
+    if (out.length < n && !out.some((o) => o.skill.id === skill.id)) out.push({ skill, reason })
+  }
+  for (const s of all.filter((x) => x.strength.status === 'zayif')) {
+    const deps = dependents(s, all).filter((x) => x.strength.status !== 'guclu')
+    if (deps.length) add(s, `${deps.length} becerinin temeli`)
+  }
+  for (const s of all) if (skillDue(s) && s.strength.status === 'zayif') add(s, s.topicIds.length > 1 ? `${s.topicIds.length} konuda çıktı` : 'Tekrar zamanı')
+  for (const s of all) if (s.strength.status === 'gelisiyor') add(s, 'Oturmak üzere')
+  return out
+}

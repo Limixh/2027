@@ -2,7 +2,7 @@
 import type { AppData } from '../../../shared/types'
 import { CURRICULUM_NOTE, SUBJECTS, SUBJECT_MAP, TOPIC_MAP, subjectsFor } from '@/data/curriculum'
 import { addDays, formatMinutes, todayKey, weekdayName } from './date'
-import { memoryForPrompt } from './brain'
+import { memoryForPrompt, reviewQueue } from './brain'
 import { estimateField, estimateTyt, FIELD_LABEL, fmtNet, MISTAKE_KIND_LABEL, net, placement, totalNet, totals, tytGroupNets } from './exam'
 import {
   bySubject,
@@ -206,9 +206,14 @@ export function buildContext(data: AppData): string {
     push(
       '',
       '## İkinci Beyin — beceri hafızası (en zayıftan güçlüye)',
-      'Not: Bir konudaki sorunun kökü başka konudaki bir beceri eksikliği olabilir. Plan ve önerilerde konu yerine bu kök becerileri hedeflemeyi düşün.',
+      'Not: Bir konudaki sorunun kökü başka konudaki bir beceri eksikliği olabilir. Plan ve önerilerde konu yerine bu kök becerileri hedeflemeyi düşün. "dayandığı beceriler" önkoşuldur: önkoşul zayıfsa önce ona çalışılmalı.',
       memory
     )
+    const queue = reviewQueue(data, 5)
+    if (queue.length)
+      push(
+        `- Bugün tekrar zamanı gelen beceriler (uygulamadaki "Beceri tekrarı" bunları 2'şer yeni soruyla sorar; günlük plana ~${queue.length * 8} dk "İkinci Beyin beceri tekrarı" görevi eklemeyi düşün): ${queue.map((s) => `"${s.name}"`).join(', ')}`
+      )
   }
 
   // Günlük planlar (bugün ve yarın)
