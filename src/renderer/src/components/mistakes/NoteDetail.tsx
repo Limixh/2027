@@ -11,7 +11,8 @@ import { AiError, TUTOR_SYSTEM, analysisPrompt, askAi, similarPrompt, splitNoteM
 import { resolveTopic } from '@/lib/aiActions'
 import { uid } from '@/lib/id'
 import { useStore } from '@/lib/store'
-import { memoryForPrompt } from '@/lib/brain'
+import { memoryForPrompt, skillStrength, STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
+import { useNav } from '@/lib/nav'
 import { KINDS } from './MistakeModal'
 import { NoteImage } from './NoteImage'
 
@@ -52,6 +53,15 @@ export function NoteDetail({
   onDelete: (n: MistakeNote) => void
 }): React.JSX.Element | null {
   const note = useStore((s) => s.data.mistakeNotes.find((m) => m.id === id))
+  const allSkills = useStore((s) => s.data.skills)
+  const linkedSkills = useMemo(
+    () =>
+      (note?.skillIds ?? [])
+        .map((sid) => allSkills.find((k) => k.id === sid))
+        .filter((k): k is NonNullable<typeof k> => !!k)
+        .map((k) => ({ ...k, st: skillStrength(k) })),
+    [note?.skillIds, allSkills]
+  )
   const update = useStore((s) => s.updateMistakeNote)
   const recordRetry = useStore((s) => s.recordRetry)
   const addComment = useStore((s) => s.addNoteComment)
@@ -256,6 +266,27 @@ export function NoteDetail({
             <Button size="sm" variant="outline" onClick={() => onEdit(note)}>
               Tamamla
             </Button>
+          </div>
+        )}
+
+        {linkedSkills.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs text-muted">Beceriler:</span>
+            {linkedSkills.map((sk) => (
+              <button
+                key={sk.id}
+                onClick={() => {
+                  onClose()
+                  useNav.getState().go('brain', { skill: sk.id })
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs text-text transition hover:bg-surface-2"
+                title={`${STATUS_LABEL[sk.st.status]} · ${sk.topicIds.length} konuda`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: STATUS_COLOR[sk.st.status] }} />
+                {sk.name}
+                {sk.topicIds.length > 1 && <span className="text-muted">· {sk.topicIds.length} konu</span>}
+              </button>
+            ))}
           </div>
         )}
 
