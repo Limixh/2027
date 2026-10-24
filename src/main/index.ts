@@ -1,4 +1,5 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, net, protocol, shell } from 'electron'
+import { pathToFileURL } from 'url'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, copyFileSync } from 'fs'
 import { join } from 'path'
 import * as ai from './ai'
@@ -147,12 +148,22 @@ function registerIpc(): void {
   ipcMain.handle('cli:abort', (_e, id: string) => cli.abort(id))
 }
 
+// Kayıtlı ekleri (soru fotoğrafları vb.) arayüzde göstermek için: yks-file://local/attachments/x.png
+protocol.registerSchemesAsPrivileged([{ scheme: 'yks-file', privileges: { standard: true, secure: true, supportFetchAPI: true } }])
+
 // Tarih seçiciler ve sayı biçimleri Türkçe olsun
 app.commandLine.appendSwitch('lang', 'tr')
 
 app.whenReady().then(() => {
   app.setAppUserModelId('com.yks2027.takip')
   registerIpc()
+  protocol.handle('yks-file', (req) => {
+    const root = app.getPath('userData')
+    const rel = decodeURIComponent(new URL(req.url).pathname).replace(/^\/+/, '')
+    const full = join(root, rel)
+    if (!full.startsWith(join(root, 'attachments'))) return new Response('yasak', { status: 403 })
+    return net.fetch(pathToFileURL(full).toString())
+  })
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

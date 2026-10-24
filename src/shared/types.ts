@@ -108,6 +108,46 @@ export interface MistakeNote {
   resolved: boolean
   date: string
   createdAt: string
+  /** Sorunun fotoğraf(lar)ı */
+  questionImages?: ChatAttachment[]
+  /** Öğrencinin silinmemiş, işlemli çözüm denemesi */
+  attemptImages?: ChatAttachment[]
+  /** AI'nin analizi (Markdown): nerede neden takıldın, doğru çözüm */
+  aiAnalysis?: string
+  aiAnalyzedAt?: string
+  /** AI'nin ürettiği benzer soru setleri (Markdown; cevaplar '---CEVAPLAR---' satırından sonra) */
+  similar?: { id: string; markdown: string; createdAt: string }[]
+  /** Tekrar çözme geçmişi */
+  retries?: { date: string; solved: boolean }[]
+  /** Bir sonraki tekrar tarihi (YYYY-MM-DD); yoksa tekrar planlanmamış */
+  nextReview?: string
+  /** Telefondan yüklendiyse true (henüz incelenmedi) */
+  inbox?: boolean
+}
+
+/** Soru pratiği seti: ör. 20 paragraf 28 dk, 17D 2Y 1B */
+export interface PracticeSet {
+  id: string
+  /** YYYY-MM-DD */
+  date: string
+  subjectId: string
+  topicId?: string
+  /** Toplam soru */
+  count: number
+  /** Toplam süre (saniye) */
+  seconds: number
+  correct: number
+  wrong: number
+  blank: number
+  /** Canlı modda ölçülen soru başına süreler (saniye) */
+  perQuestion?: number[]
+  /** Canlı modda soru başına sonuç */
+  perResult?: ('D' | 'Y' | 'B')[]
+  source?: string
+  note?: string
+  /** Otomatik oluşturulan çalışma kaydı */
+  sessionId?: string
+  createdAt: string
 }
 
 export interface Goal {
@@ -208,6 +248,7 @@ export interface AppData {
   countdowns: Countdown[]
   /** tarih -> günlük plan */
   plans: Record<string, DailyPlan>
+  practiceSets: PracticeSet[]
 }
 
 /** Sohbete eklenen dosya (userData/attachments altında saklanır) */

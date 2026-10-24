@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type {
   AppData,
   Countdown,
+  PracticeSet,
   DailyPlan,
   PlanTask,
   TaskResult,
@@ -14,7 +15,7 @@ import type {
   StudySession,
   TopicProgress
 } from '../../../shared/types'
-import { todayKey } from './date'
+import { addDays, todayKey } from './date'
 import { uid } from './id'
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -45,7 +46,8 @@ export const emptyData = (): AppData => ({
   goals: [],
   chats: [],
   countdowns: [],
-  plans: {}
+  plans: {},
+  practiceSets: []
 })
 
 /** Eski/eksik veriyi güncel şemaya tamamla */
@@ -62,7 +64,8 @@ export function normalize(raw: Partial<AppData> | null | undefined): AppData {
     goals: Array.isArray(raw.goals) ? raw.goals : [],
     chats: Array.isArray(raw.chats) ? raw.chats : [],
     countdowns: Array.isArray(raw.countdowns) ? raw.countdowns : [],
-    plans: raw.plans && typeof raw.plans === 'object' ? raw.plans : {}
+    plans: raw.plans && typeof raw.plans === 'object' ? raw.plans : {},
+    practiceSets: Array.isArray(raw.practiceSets) ? raw.practiceSets : []
   }
 }
 
@@ -137,6 +140,13 @@ interface Store {
   completePlanTask(date: string, id: string, result: TaskResult): void
   /** Bitirmeyi geri alır (oluşan çalışma kaydı silinir) */
   reopenPlanTask(date: string, id: string): void
+
+  /** Pratik seti ekler; süre > 0 ise çalışma kaydı da oluşturur */
+  addPracticeSet(p: Omit<PracticeSet, 'id' | 'createdAt' | 'sessionId'>): PracticeSet
+  updatePracticeSet(id: string, patch: Partial<PracticeSet>): void
+  deletePracticeSet(id: string): void
+  /** Hata defterindeki soruyu tekrar çözme sonucu (aralıklı tekrar) */
+  recordRetry(noteId: string, solved: boolean): void
 
   addCountdown(c: Omit<Countdown, 'id'>): void
   deleteCountdown(id: string): void
@@ -336,6 +346,57 @@ export const useStore = create<Store>((set, get) => {
       if (!task) return
       if (task.sessionId) get().deleteSession(task.sessionId)
       get().updatePlanTask(date, id, { done: false, doneAt: undefined, sessionId: undefined })
+    },
+
+    addPracticeSet(p) {
+      let sessionId: string | undefined
+      if (p.seconds > 0) {
+        sessionId = get().addSession({
+          date: p.date,
+          minutes: Math.max(1, Math.round(p.seconds / 60)),
+          subjectId: p.subjectId,
+          topicId: p.topicId,
+          solved: p.count,
+          correct: p.correct,
+          wrong: p.wrong,
+          kind: 'soru',
+          note: p.source ? `Pratik: ${p.source}` : 'Soru pratiği'
+        }).id
+      }
+      const set: PracticeSet = { ...p, id: uid(), sessionId, createdAt: now() }
+      mutate((d) => ({ ...d, practiceSets: [...d.practiceSets, set] }))
+      return set
+    },
+    updatePracticeSet(id, patch) {
+      mutate((d) => ({ ...d, practiceSets: d.practiceSets.map((x) => (x.id === id ? { ...x, ...patch } : x)) }))
+      const set = get().data.practiceSets.find((x) => x.id === id)
+      if (set?.sessionId)
+        get().updateSession(set.sessionId, {
+          date: set.date,
+          minutes: Math.max(1, Math.round(set.seconds / 60)),
+          subjectId: set.subjectId,
+          topicId: set.topicId,
+          solved: set.count,
+          correct: set.correct,
+          wrong: set.wrong
+        })
+    },
+    deletePracticeSet(id) {
+      const set = get().data.practiceSets.find((x) => x.id === id)
+      if (set?.sessionId) get().deleteSession(set.sessionId)
+      mutate((d) => ({ ...d, practiceSets: d.practiceSets.filter((x) => x.id !== id) }))
+    },
+    recordRetry(noteId, solved) {
+      const note = get().data.mistakeNotes.find((m) => m.id === noteId)
+      if (!note) return
+      const retries = [...(note.retries ?? []), { date: todayKey(), solved }]
+      // Üst üste doğru çözüm sayısına göre aralık: 1 → 3 → 7 → 14 gün; 3 doğrudan sonra öğrenildi
+      let streak = 0
+      for (let i = retries.length - 1; i >= 0 && retries[i].solved; i--) streak++
+      const intervals = [1, 3, 7, 14]
+      const learned = streak >= 3
+      const next = learned ? undefined : addDays(todayKey(), solved ? intervals[Math.min(streak, 3)] : 1)
+      get().updateMistakeNote(noteId, { retries, nextReview: next, resolved: learned || note.resolved, inbox: false })
     },
 
     addCountdown(c) {
