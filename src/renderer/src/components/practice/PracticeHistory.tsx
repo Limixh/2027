@@ -42,7 +42,7 @@ export function PracticeHistory({
                     {live && <ChevronDown size={13} className={`shrink-0 text-subtle transition-transform ${expanded ? 'rotate-180' : ''}`} />}
                   </div>
                   <div className="tabular mt-0.5 truncate text-xs text-muted">
-                    {s.count} soru · {Math.round(s.seconds / 60)} dk · {fmtDur(s.seconds / s.count)}/soru ·{' '}
+                    {s.count} soru · {s.seconds < 60 ? `${s.seconds} sn` : `${Math.round(s.seconds / 60)} dk`} · {fmtDur(s.seconds / s.count)}/soru ·{' '}
                     <span className="text-success">{s.correct}D</span> <span className="text-danger">{s.wrong}Y</span> {s.blank}B
                     {s.source && <span className="text-subtle"> · {s.source}</span>}
                     {s.note && <span className="text-subtle"> · {s.note}</span>}

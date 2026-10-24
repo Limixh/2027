@@ -13,6 +13,7 @@ YKS 2027'ye hazırlanırken çalışmanı, denemelerini, konu ilerlemeni ve hata
 | **Denemeler** | TYT/AYT deneme girişi (D/Y/B → net otomatik), alanına göre AYT dersleri, **her yanlış/boşun hangi konudan ve hangi nedenle** (bilgi eksiği, dikkat, süre, yorum) olduğunu girme, net trend grafikleri, tahmini puan |
 | **Konu Takibi** | Tüm TYT/AYT konuları; durum (başlanmadı → pekişti), öz güven, aralıklı tekrar hatırlatmaları, konu bazında çözülen soru ve deneme hataları |
 | **Hata Analizi** | Hangi konularda yanlışın var: öncelik puanlı zayıf konu listesi, ders performans tablosu, hata türü dağılımı, otomatik içgörüler |
+| **Soru Pratiği** | "20 paragraf · 28 dk · 17D 2Y 1B" gibi set kaydı; canlı modda her soruda D/Y/B'ye basarak soru başına süre ölçümü; sn/soru, doğruluk ve günlük soru grafikleri |
 | **Hata Defteri** | Yanlış yaptığın soruları not al, "doğrusu/çıkardığım ders" yaz, kart modunda tekrar et |
 | **Çalışma Odası** | Sade, tam ekran çalışma sayfası: solda tek araç (saat / geri sayım / kronometre / YKS'ye kalan), sağda günün planı. Görevi "Bitti" deyince çalışma kaydı eklenir ve konu durumu otomatik güncellenir |
 | **AI Koç** | Claude'a bağlan; tüm verilerin otomatik özetlenip gönderilir. Deneme analizi, haftalık program, zayıf konu stratejisi... |
@@ -20,6 +21,11 @@ YKS 2027'ye hazırlanırken çalışmanı, denemelerini, konu ilerlemeni ve hata
 | **Ayarlar** | Alan (SAY/EA/SÖZ/DİL), hedef netler, OBP, sınav tarihi, tema (koyu/açık), yedek al/yükle, örnek veri |
 
 Veriler bilgisayarında yerel olarak saklanır (`%APPDATA%/YKS 2027 Takip/yks-data.json`), her gün otomatik yedek alınır.
+
+### Yanlış soruların fotoğrafları
+- Hata Defteri → **Telefondan yükle**: ekrandaki QR kodu telefonla okut (aynı Wi-Fi), açılan sayfada sorunun ve istersen kendi karalamalı çözümünün fotoğrafını çekip gönder. Bilgisayardan dosya seçerek / sürükleyerek / Ctrl+V ile de eklenir.
+- **AI ile analiz et**: doğru çözüm + çözümünde tam olarak nerede, neden takıldığın + bir daha kaçırmamak için ipuçları. **Benzer soru üret**: aynı kazanımı ölçen yeni sorular (cevaplar gizli).
+- Çözemediğin sorular aralıklı tekrar listesine girer (1 → 3 → 7 → 14 gün); **Bugün tekrar** sekmesinden yeniden çöz, 3 kez üst üste çözünce "öğrenildi" olur.
 
 ## Kurulum (Windows)
 
