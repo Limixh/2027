@@ -73,6 +73,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         correctAnswer?: string
         myAnswer?: string
         usedSolution?: boolean
+        usedHint?: boolean
+        hintSeen?: string
       }
       const save = (list: string[] | undefined, prefix: string): ChatAttachment[] =>
         (list ?? []).slice(0, 6).map((b64, i) => saveAttachment(`${prefix}-${Date.now()}-${i + 1}.jpg`, b64.replace(/^data:[^,]+,/, '')))
@@ -86,6 +88,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         correctAnswer: (body.correctAnswer ?? '').slice(0, 40) || undefined,
         myAnswer: (body.myAnswer ?? '').slice(0, 40) || undefined,
         usedSolution: body.usedSolution === true || undefined,
+        usedHint: (body.usedSolution !== true && body.usedHint === true) || undefined,
+        hintSeen: (body.hintSeen ?? '').slice(0, 1000) || undefined,
         questionImages: question,
         attemptImages: save(body.attempt, 'cozum')
       }

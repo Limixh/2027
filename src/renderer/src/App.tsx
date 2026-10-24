@@ -80,6 +80,8 @@ export default function App(): React.JSX.Element {
         correctAnswer: u.correctAnswer,
         myAnswer: u.myAnswer,
         usedSolution: u.usedSolution,
+        usedHint: u.usedHint,
+        hintSeen: u.hintSeen,
         questionImages: u.questionImages,
         attemptImages: u.attemptImages.length ? u.attemptImages : undefined,
         inbox: true,

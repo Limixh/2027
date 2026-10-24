@@ -68,7 +68,9 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
     <select id="correct"><option value="">Doğru cevap</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option></select>
     <select id="mine"><option value="">Benim cevabım</option><option>A</option><option>B</option><option>C</option><option>D</option><option>E</option><option value="Boş">Boş</option></select>
   </div>
-  <label style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:15px"><input id="help" type="checkbox" style="display:inline;width:20px;height:20px" /> Çözüme bakarak yaptım</label>
+  <div style="height:8px"></div>
+  <select id="help"><option value="">Kendim denedim, çözemedim</option><option value="hint">Bir ipucuna baktım, gerisini kendim yaptım</option><option value="sol">Çözüme bakarak yaptım</option></select>
+  <textarea id="hint" placeholder="Neyi gördün? ör. ortak paranteze alındığını gördüm, sonrasını ben yaptım" style="display:none;margin-top:8px"></textarea>
 
   <label class="t">Not (isteğe bağlı)</label>
   <textarea id="note" placeholder="ör. Süre yetmedi / şıklar arasında kaldım"></textarea>
@@ -83,6 +85,7 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   var t = new URLSearchParams(location.search).get('t') || '';
   var state = { q: [], a: [] };
   var $ = function (id) { return document.getElementById(id); };
+  $('help').addEventListener('change', function () { $('hint').style.display = $('help').value === 'hint' ? 'block' : 'none'; });
   var subjectSel = $('subject'), topicSel = $('topic'), msg = $('msg'), sendBtn = $('send');
   var catalog = [];
   var last = {};
@@ -160,13 +163,13 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
 
   sendBtn.addEventListener('click', function () {
     sendBtn.disabled = true; sendBtn.textContent = 'Gönderiliyor…';
-    var body = { subjectId: subjectSel.value, topicId: topicSel.value, note: $('note').value, source: $('source').value, question: state.q, attempt: state.a, correctAnswer: $('correct').value, myAnswer: $('mine').value, usedSolution: $('help').checked };
+    var body = { subjectId: subjectSel.value, topicId: topicSel.value, note: $('note').value, source: $('source').value, question: state.q, attempt: state.a, correctAnswer: $('correct').value, myAnswer: $('mine').value, usedSolution: $('help').value === 'sol', usedHint: $('help').value === 'hint', hintSeen: $('help').value === 'hint' ? $('hint').value : '' };
     try { localStorage.setItem('yks-phone-last', JSON.stringify({ subjectId: subjectSel.value })); } catch (e) {}
     fetch('/api/upload?t=' + encodeURIComponent(t), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Hata'); return j; }); })
       .then(function (j) {
         show('Gönderildi ✓ Bilgisayarda Hata Defteri\\'ne düştü (' + j.received + '). Sıradaki soruyu ekleyebilirsin.', false);
-        state = { q: [], a: [] }; $('note').value = ''; $('correct').value = ''; $('mine').value = ''; $('help').checked = false; render(); window.scrollTo(0, 0);
+        state = { q: [], a: [] }; $('note').value = ''; $('correct').value = ''; $('mine').value = ''; $('help').value = ''; $('hint').value = ''; $('hint').style.display = 'none'; render(); window.scrollTo(0, 0);
       })
       .catch(function (e) { show(e.message + ' — bilgisayar ve telefon aynı Wi-Fi\\'da mı?', true); })
       .finally(function () { sendBtn.textContent = 'Gönder'; sendBtn.disabled = state.q.length === 0; });

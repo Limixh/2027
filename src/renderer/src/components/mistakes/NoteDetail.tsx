@@ -108,6 +108,8 @@ export function NoteDetail({
           correctAnswer: note.correctAnswer,
           myAnswer: note.myAnswer,
           usedSolution: note.usedSolution || note.kind === 'cozum',
+          usedHint: note.usedHint,
+          hintSeen: note.hintSeen,
           comments: note.comments,
           memory: memoryForPrompt(useStore.getState().data, { subjectId: note.subjectId, topicId: note.topicId }) || undefined
         }),
@@ -294,7 +296,7 @@ export function NoteDetail({
           </div>
         )}
 
-        {(note.correctAnswer || note.myAnswer || note.usedSolution) && (
+        {(note.correctAnswer || note.myAnswer || note.usedSolution || note.usedHint) && (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm">
             {note.correctAnswer && (
               <span className="text-muted">
@@ -307,6 +309,9 @@ export function NoteDetail({
               </span>
             )}
             {note.usedSolution && <span className="text-[#4f9a95]">Çözüme bakarak yaptım</span>}
+            {note.usedHint && !note.usedSolution && (
+              <span className="text-[#4f9a95]">İpucuna baktım, gerisi benim{note.hintSeen ? `: “${note.hintSeen}”` : ''}</span>
+            )}
           </div>
         )}
 

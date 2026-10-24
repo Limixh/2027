@@ -68,19 +68,23 @@ export function analysisPrompt(p: {
   correctAnswer?: string
   myAnswer?: string
   usedSolution?: boolean
+  usedHint?: boolean
+  hintSeen?: string
   comments?: { date: string; text: string }[]
   /** İkinci Beyin hafızası (memoryForPrompt çıktısı) */
   memory?: string
 }): string {
   const facts = [
     p.comments?.length
-      ? `Öğrencinin bu soru hakkındaki kendi yorumları (nerede takıldığını anlatıyor; analizini özellikle bunlara göre yap ve her birine cevap ver):\n${p.comments.map((c) => `- (${c.date}) ${c.text}`).join('\n')}`
+      ? `Öğrencinin bu soru hakkındaki kendi yorumları (nerede takıldığını anlatıyor; analizini özellikle bunlara göre yap ve her birine cevap ver. Yorumda "şunu gördükten sonra yaptım" gibi bir ipucuna/çözüme baktığını söylüyorsa: gördüğü kısmı onun başarısı sayma, o fikri kök eksik say; sonrasını kendi işi olarak değerlendir):\n${p.comments.map((c) => `- (${c.date}) ${c.text}`).join('\n')}`
       : '',
     p.correctAnswer ? `Doğru cevap (cevap anahtarından): ${p.correctAnswer} — çözümün bu cevaba ulaşmalı; ulaşamıyorsan bunu açıkça söyle.` : '',
     p.myAnswer ? `Öğrencinin işaretlediği cevap: ${p.myAnswer}.` : '',
     p.usedSolution
       ? 'ÖNEMLİ: Öğrenci bu soruyu kendi başına ÇÖZEMEDİ, ÇÖZÜME BAKARAK yaptı. Görseldeki işlemler (varsa) çözümden bakılarak yazılmış olabilir; doğru görünen adımları onun kendi başarısı SAYMA ve "burayı doğru yapmışsın" deme. Bunun yerine: çözümde hangi fikri/adımı kendi başına bulamamış olabileceğini (genelde ilk hamle, doğru yöntemi seçme ya da kritik dönüşüm), soruda bu adımı tetiklemesi gereken ipucunu ve bir dahaki sefere o adımı kendisinin nasıl bulacağını (sormasi gereken soru, tanıması gereken kalıp) açıkla.'
-      : ''
+      : p.usedHint
+        ? `ÖNEMLİ: Öğrenci soruyu tamamen kendi başına çözemedi; çözümün YALNIZCA bir kısmına / bir ipucuna (trick) bakıp gerisini KENDİSİ yaptı.${p.hintSeen ? ` Gördüğü ipucu: "${p.hintSeen}".` : ' Neyi gördüğünü yorumlarında anlatıyor olabilir; yorumlardan çıkar.'} Buna göre: (1) ipucundaki fikir, öğrencinin kendi başına bulamadığı asıl adımdır — bunu kök eksik olarak ele al; soruda bu fikri neyin tetiklemesi gerektiğini ve bir dahaki sefere ipucuna bakmadan nasıl bulacağını açıkla. (2) İpucundan SONRA görseldeki işlemler öğrencinin kendi işidir; bunları normal değerlendir, doğru yaptıklarını takdir et, hata varsa göster. (3) İpucundan önceki/ipucunu kopyaladığı kısmı onun başarısı sayma.`
+        : ''
   ].filter(Boolean)
   return `Öğrenci uygulamaya YALNIZCA kendi başına çözemediği / yanlış yaptığı soruları ekler. Ekteki görsel(ler) böyle bir ${p.subject}${p.topic ? ` (${p.topic})` : ''} sorusu.${
     p.hasAttempt ? ' Görsellerden biri öğrencinin silinmemiş, karalamalı kendi çözüm denemesi.' : ''
@@ -113,7 +117,7 @@ ${p.memory}
 En sonda tek bir kod bloğu ekle (dili yks-note), içinde yalnızca JSON:
 {"topic":"konunun müfredattaki adı","kind":"bilgi|dikkat|sure|yorum|bos|cozum","summary":"hatanın tek cümlelik özeti","lesson":"akılda tutulacak tek cümle","skills":[{"id":"hafızadaki id (aynı beceriyse) ya da boş","name":"beceri adı","role":"eksik|zayif|basari","detail":"bu soruda bu becerinin rolü, 1 cümle","description":"yeni beceriyse kısa genel tanım","area":"genel alan"}]}
 
-skills kuralları: Soruyu çözmek için gereken 1-4 temel beceri/yöntem/kavramı yaz. Beceri adı KONUDAN BAĞIMSIZ ve yeniden kullanılabilir olsun (ör. "Denklem sisteminde yok etme yöntemi", "Kesirli ifadelerde payda eşitleme", "Geri koymadan olasılıkta koşullu olasılık", "Paragrafta ana düşünceyi yardımcıdan ayırma"); "parabol sorusu" gibi konu adları beceri değildir. Hafızada aynı ya da çok yakın bir beceri varsa YENİ AD UYDURMA, onun id'sini ve adını aynen kullan. role: öğrencinin yapamadığı adım = eksik, zorlandığı ya da çözüme bakarak geçtiği = zayif; basari YALNIZCA öğrencinin kendi çözüm denemesinde açıkça ve kendi başına doğru yaptığı bir beceri için (çözüme bakılan soruda basari YAZMA). Asıl takılmanın kök becerisini ilk sıraya koy. area: becerinin genel alanı (ör. "Cebir", "Fonksiyonlar", "Olasılık", "Geometri — üçgenler", "Paragraf", "Dil bilgisi", "Fizik — kuvvet"); hafızadaki benzer becerilerle aynı alan adını kullan.`
+skills kuralları: Soruyu çözmek için gereken 1-4 temel beceri/yöntem/kavramı yaz. Beceri adı KONUDAN BAĞIMSIZ ve yeniden kullanılabilir olsun (ör. "Denklem sisteminde yok etme yöntemi", "Kesirli ifadelerde payda eşitleme", "Geri koymadan olasılıkta koşullu olasılık", "Paragrafta ana düşünceyi yardımcıdan ayırma"); "parabol sorusu" gibi konu adları beceri değildir. Hafızada aynı ya da çok yakın bir beceri varsa YENİ AD UYDURMA, onun id'sini ve adını aynen kullan. role: öğrencinin yapamadığı adım = eksik, zorlandığı ya da çözüme bakarak geçtiği = zayif; basari YALNIZCA öğrencinin kendi çözüm denemesinde açıkça ve kendi başına doğru yaptığı bir beceri için (çözüme bakılan soruda basari YAZMA; ipucuna bakılan soruda ipucundaki fikir eksik, ipucundan sonra kendi doğru yaptığı adımlar basari olabilir). Asıl takılmanın kök becerisini ilk sıraya koy. area: becerinin genel alanı (ör. "Cebir", "Fonksiyonlar", "Olasılık", "Geometri — üçgenler", "Paragraf", "Dil bilgisi", "Fizik — kuvvet"); hafızadaki benzer becerilerle aynı alan adını kullan.`
 }
 
 export function similarPrompt(p: { subject: string; topic?: string; count: number; analysis?: string }): string {

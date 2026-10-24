@@ -130,6 +130,10 @@ export interface MistakeNote {
   myAnswer?: string
   /** Soruyu çözüme bakarak yaptı */
   usedSolution?: boolean
+  /** Çözümün yalnızca bir kısmına / bir ipucuna (trick) bakıp gerisini kendi yaptı */
+  usedHint?: boolean
+  /** İpucunda ne gördü ("ortak paranteze alındığını gördüm, sonrasını ben yaptım") */
+  hintSeen?: string
   /** Öğrencinin tarihli yorumları: "x'i yapmıştım ama şurada takıldım" */
   comments?: { id: string; date: string; text: string }[]
   /** Bu soruyla ilişkili beceriler (İkinci Beyin) */
@@ -380,6 +384,8 @@ export interface PhoneUpload {
   correctAnswer?: string
   myAnswer?: string
   usedSolution?: boolean
+  usedHint?: boolean
+  hintSeen?: string
   topicId?: string
   note: string
   source?: string

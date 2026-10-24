@@ -17,7 +17,7 @@ function prompt(noteId: string): string {
   const n = d.mistakeNotes.find((m) => m.id === noteId)!
   const memory = memoryForPrompt(d, { subjectId: n.subjectId, topicId: n.topicId })
   return `Aşağıda öğrencinin yanlış yaptığı bir ${SUBJECT_MAP[n.subjectId]?.name ?? ''}${n.topicId ? ` (${TOPIC_MAP[n.topicId]?.name})` : ''} sorusunun daha önce yapılmış analizi var. Bu analize göre sorunun gerektirdiği 1-4 temel beceriyi çıkar.
-${n.comments?.length ? `Öğrencinin yorumları:\n${n.comments.map((c) => `- ${c.text}`).join('\n')}\n` : ''}
+${n.usedSolution || n.kind === 'cozum' ? 'Öğrenci bu soruyu çözüme bakarak yaptı: hiçbir adım onun başarısı sayılmaz (basari yazma).\n' : n.usedHint ? `Öğrenci yalnızca bir ipucuna bakıp gerisini kendisi yaptı${n.hintSeen ? ` (gördüğü: "${n.hintSeen}")` : ''}: ipucundaki fikir eksik, sonrasında kendi doğru yaptıkları basari olabilir.\n` : ''}${n.comments?.length ? `Öğrencinin yorumları:\n${n.comments.map((c) => `- ${c.text}`).join('\n')}\n` : ''}
 <analiz>
 ${(n.aiAnalysis ?? '').slice(0, 6000)}
 </analiz>

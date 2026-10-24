@@ -8,6 +8,12 @@ import { addDays, todayKey } from '@/lib/date'
 import { useStore } from '@/lib/store'
 import { ImagePicker } from './ImagePicker'
 
+const HELP_OPTIONS: { id: 'none' | 'hint' | 'sol'; label: string; title: string }[] = [
+  { id: 'none', label: 'Kendim denedim', title: 'Çözüme bakmadım, çözemedim / yanlış yaptım' },
+  { id: 'hint', label: 'Bir ipucuna baktım, gerisi benim', title: 'Çözümün sadece bir kısmına / bir trick’e baktım, gerisini kendim yaptım' },
+  { id: 'sol', label: 'Çözüme bakarak yaptım', title: 'Çözümün tamamına bakarak yaptım' }
+]
+
 export const KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos', 'cozum']
 
 export interface MistakeDraft {
@@ -46,7 +52,8 @@ export function MistakeModal({
   const [resolved, setResolved] = useState(note?.resolved ?? false)
   const [correctAnswer, setCorrectAnswer] = useState(note?.correctAnswer ?? '')
   const [myAnswer, setMyAnswer] = useState(note?.myAnswer ?? '')
-  const [usedSolution, setUsedSolution] = useState(note?.usedSolution ?? note?.kind === 'cozum')
+  const [help, setHelp] = useState<'none' | 'hint' | 'sol'>(note?.usedSolution || note?.kind === 'cozum' ? 'sol' : note?.usedHint ? 'hint' : 'none')
+  const [hintSeen, setHintSeen] = useState(note?.hintSeen ?? '')
   const [tried, setTried] = useState(false)
   const [qImgs, setQImgs] = useState<ChatAttachment[]>(note?.questionImages ?? [])
   const [aImgs, setAImgs] = useState<ChatAttachment[]>(note?.attemptImages ?? [])
@@ -85,7 +92,9 @@ export function MistakeModal({
       resolved,
       correctAnswer: correctAnswer.trim() || undefined,
       myAnswer: myAnswer.trim() || undefined,
-      usedSolution: usedSolution || undefined,
+      usedSolution: help === 'sol' || undefined,
+      usedHint: help === 'hint' || undefined,
+      hintSeen: help === 'hint' ? hintSeen.trim() || undefined : undefined,
       questionImages: qImgs.length ? qImgs : undefined,
       attemptImages: aImgs.length ? aImgs : undefined
     }
@@ -241,23 +250,37 @@ export function MistakeModal({
           <Field label="Benim cevabım" hint="Boş bıraktıysan boş geç">
             <AnswerInput value={myAnswer} onChange={setMyAnswer} />
           </Field>
-          <button
-            type="button"
-            onClick={() => {
-              setUsedSolution((v) => !v)
-              if (!usedSolution) setKind('cozum')
-            }}
-            className={cn(
-              'flex h-9 w-fit items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-colors md:col-span-2',
-              usedSolution ? 'border-[#4f9a95] bg-[#4f9a95]/15 text-[#4f9a95]' : 'border-border bg-surface-2 text-muted hover:text-text'
+          <div className="md:col-span-2">
+            <div className="flex flex-wrap gap-1.5">
+              {HELP_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => {
+                    setHelp(o.id)
+                    if (o.id === 'sol') setKind('cozum')
+                    else if (kind === 'cozum') setKind('bilgi')
+                  }}
+                  className={cn(
+                    'h-8 rounded-lg border px-3 text-xs font-medium transition-colors',
+                    help === o.id ? 'border-[#4f9a95] bg-[#4f9a95]/15 text-[#4f9a95]' : 'border-border bg-surface-2 text-muted hover:text-text'
+                  )}
+                  title={o.title}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+            {help === 'hint' && (
+              <Textarea
+                rows={2}
+                className="mt-2"
+                value={hintSeen}
+                onChange={(e) => setHintSeen(e.target.value)}
+                placeholder="Neyi gördün? ör. ortak paranteze alındığını gördüm, sonrasını kendim yaptım"
+              />
             )}
-            title="Bu soruyu çözüme bakarak yaptım"
-          >
-            <span className={cn('grid h-4 w-4 place-items-center rounded border', usedSolution ? 'border-[#4f9a95] bg-[#4f9a95] text-white' : 'border-subtle')}>
-              {usedSolution && '✓'}
-            </span>
-            Çözüme bakarak yaptım
-          </button>
+          </div>
         </div>
 
         <Field label={hasImg ? 'Not (isteğe bağlı)' : 'Soru / hata açıklaması'} hint={tried && !text.trim() && !hasImg ? undefined : 'Soruyu veya neyi yanlış yaptığını kısaca yaz.'}>

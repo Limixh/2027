@@ -1,8 +1,8 @@
 {
-  "version": "1.5.0",
-  "file": "app-1.5.0.json.gz",
-  "sha256": "98d3b10691528cd7d8b579964bf2df12614404defb4626456d0541db7d4de030",
+  "version": "1.5.1",
+  "file": "app-1.5.1.json.gz",
+  "sha256": "201aa7a1154bc1521604b8ee5d9c1e19d618b92b7df84e5b7e35bcdab8d3fd43",
   "minShell": "1.1.0",
-  "notes": "Çözüme bakılan sorular artık başarı sayılmıyor; İkinci Beyin daha iyi eşleştiriyor ve kendini düzenliyor (kopya birleştirme, alanlar)",
+  "notes": "Yeni seçenek: Bir ipucuna baktım, gerisini kendim yaptım (telefonda da)",
   "date": "2026-10-24"
 }
