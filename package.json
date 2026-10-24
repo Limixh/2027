@@ -1,7 +1,7 @@
 {
   "name": "yks-2027-takip",
   "productName": "YKS 2027 Takip",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "YKS 2027 için çalışma takibi, deneme analizi, konu ilerlemesi ve yapay zeka koçu",
   "main": "./out/main/bootstrap.js",
   "author": "YKS 2027 Takip",

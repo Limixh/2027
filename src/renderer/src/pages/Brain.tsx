@@ -91,11 +91,14 @@ function SyncButton({ prominent }: { prominent?: boolean }): React.JSX.Element |
   )
 }
 
-function TidyButton({ onPlan }: { onPlan: (p: BrainPlan) => void }): React.JSX.Element | null {
-  const count = useStore((s) => s.data.skills.length)
+/**
+ * "Hafızayı düzenle": AI önkoşul bağlarını, alanları ve tanımları ekler; birleştirme / ad önerilerini onaya sunar.
+ * Hem başlıktaki düğme hem beceri detayındaki "Temeller" bölümü kullanır.
+ */
+function useTidy(onPlan: (p: BrainPlan) => void): { busy: boolean; run: () => Promise<void> } {
   const [busy, setBusy] = useState(false)
-  if (count < 2) return null
   const run = async (): Promise<void> => {
+    if (busy) return
     setBusy(true)
     try {
       const r = await consolidateBrain()
@@ -112,16 +115,22 @@ function TidyButton({ onPlan }: { onPlan: (p: BrainPlan) => void }): React.JSX.E
       setBusy(false)
     }
   }
+  return { busy, run }
+}
+
+function TidyButton({ busy, onRun }: { busy: boolean; onRun: () => void }): React.JSX.Element | null {
+  const count = useStore((s) => s.data.skills.length)
+  if (count < 2) return null
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       disabled={busy}
       icon={busy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-      onClick={() => void run()}
+      onClick={onRun}
       title="AI beceriler arasındaki önkoşul bağlarını, alanları ve tanımları ekler; kopya birleştirme ve ad önerilerini onayına sunar"
     >
-      {busy ? 'Düzenleniyor…' : 'Hafızayı düzenle'}
+      {busy ? 'Düzenleniyor…' : 'Hafızayı düzenle (AI)'}
     </Button>
   )
 }
@@ -140,6 +149,7 @@ export default function Brain(): React.JSX.Element {
   const [plan, setPlan] = useState<BrainPlan | null>(null)
   const pending = data.brainMeta?.pending
   const closeReview = useCallback(() => setReview(null), [])
+  const tidy = useTidy(setPlan)
 
   useEffect(() => {
     if (typeof paramSkill === 'string') {
@@ -209,7 +219,7 @@ export default function Brain(): React.JSX.Element {
           </div>
           <div className="flex items-center gap-2">
             <UndoButton />
-            <TidyButton onPlan={setPlan} />
+            <TidyButton busy={tidy.busy} onRun={() => void tidy.run()} />
             <SyncButton />
           </div>
         </div>
@@ -289,6 +299,7 @@ export default function Brain(): React.JSX.Element {
                 onOpenNote={setNoteId}
                 onChanged={(next) => setSelected(next)}
                 onReview={(id) => setReview([id])}
+                tidy={tidy}
               />
             ) : (
               <p className="py-20 text-center text-sm text-subtle">Soldan bir beceri seç.</p>

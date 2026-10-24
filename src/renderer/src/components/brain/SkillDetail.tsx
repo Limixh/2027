@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { AlertTriangle, GitMerge, Play, Plus, Trash2, X } from 'lucide-react'
+import { AlertTriangle, GitMerge, Play, Plus, Sparkles, Trash2, X } from 'lucide-react'
 import { SUBJECT_MAP } from '@/data/curriculum'
 import { Button, Input, Segmented, Select, confirm, cn } from '@/components/ui'
 import { dependents, rootCauses, skillDue, STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
@@ -167,7 +167,17 @@ function SkillChip({ s, onClick, onRemove }: { s: SkillRow; onClick: () => void;
 }
 
 /** Önkoşullar (bu beceri neye dayanıyor) ve bu beceriye dayananlar */
-function Foundations({ skill, all, onSelect }: { skill: SkillRow; all: SkillRow[]; onSelect: (id: string) => void }): React.JSX.Element {
+function Foundations({
+  skill,
+  all,
+  onSelect,
+  tidy
+}: {
+  skill: SkillRow
+  all: SkillRow[]
+  onSelect: (id: string) => void
+  tidy: { busy: boolean; run: () => Promise<void> }
+}): React.JSX.Element {
   const update = useStore((s) => s.updateSkill)
   const [adding, setAdding] = useState(false)
   const prereqs = (skill.prereqIds ?? []).map((id) => all.find((s) => s.id === id)).filter((s): s is SkillRow => !!s)
@@ -218,7 +228,15 @@ function Foundations({ skill, all, onSelect }: { skill: SkillRow; all: SkillRow[
               />
             ))
           ) : (
-            <span className="text-subtle">Henüz yok — “Hafızayı düzenle” AI ile bulur ya da elle ekle.</span>
+            <span className="flex flex-wrap items-center gap-2 text-subtle">
+              Henüz yok.
+              {all.length > 1 && (
+                <Button variant="outline" size="sm" disabled={tidy.busy} icon={<Sparkles size={12} />} onClick={() => void tidy.run()}>
+                  {tidy.busy ? 'AI bağları arıyor…' : 'AI ile bağları bul'}
+                </Button>
+              )}
+              <span>ya da sağ üstten elle ekle.</span>
+            </span>
           )}
         </div>
         {deps.length > 0 && (
@@ -292,7 +310,8 @@ export function SkillDetail({
   all,
   onOpenNote,
   onChanged,
-  onReview
+  onReview,
+  tidy
 }: {
   skill: SkillRow
   all: SkillRow[]
@@ -301,6 +320,8 @@ export function SkillDetail({
   onChanged: (nextId?: string) => void
   /** Bu beceriyi şimdi tekrar et */
   onReview: (id: string) => void
+  /** "Hafızayı düzenle" (AI önkoşulları bulur) */
+  tidy: { busy: boolean; run: () => Promise<void> }
 }): React.JSX.Element {
   const update = useStore((s) => s.updateSkill)
   const remove = useStore((s) => s.deleteSkill)
@@ -439,7 +460,7 @@ export function SkillDetail({
         )}
       </Section>
 
-      <Foundations skill={skill} all={all} onSelect={(id) => onChanged(id)} />
+      <Foundations skill={skill} all={all} onSelect={(id) => onChanged(id)} tidy={tidy} />
 
       {/* Kanıtlar */}
       <Section

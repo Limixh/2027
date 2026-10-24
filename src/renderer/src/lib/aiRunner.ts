@@ -138,6 +138,31 @@ En sonda tek bir kod bloğu ekle (dili yks-note), içinde yalnızca JSON:
 skills kuralları: Soruyu çözmek için gereken 1-4 temel beceri/yöntem/kavramı yaz. Beceri adı KONUDAN BAĞIMSIZ ve yeniden kullanılabilir olsun (ör. "Denklem sisteminde yok etme yöntemi", "Kesirli ifadelerde payda eşitleme", "Geri koymadan olasılıkta koşullu olasılık", "Paragrafta ana düşünceyi yardımcıdan ayırma"); "parabol sorusu" gibi konu adları beceri değildir. Hafızada aynı ya da çok yakın bir beceri varsa YENİ AD UYDURMA, onun id'sini ve adını aynen kullan. role: öğrencinin yapamadığı adım = eksik, zorlandığı ya da çözüme bakarak geçtiği = zayif; basari YALNIZCA öğrencinin kendi çözüm denemesinde açıkça ve kendi başına doğru yaptığı bir beceri için (çözüme bakılan soruda basari YAZMA; ipucuna bakılan soruda ipucundaki fikir eksik, ipucundan sonra kendi doğru yaptığı adımlar basari olabilir). Asıl takılmanın kök becerisini ilk sıraya koy. area: becerinin genel alanı (ör. "Cebir", "Fonksiyonlar", "Olasılık", "Geometri — üçgenler", "Paragraf", "Dil bilgisi", "Fizik — kuvvet"); hafızadaki benzer becerilerle aynı alan adını kullan.`
 }
 
+/** Analizden sonra öğrencinin sorusu: "şurayı tekrar anlat", "bu adım neden böyle?" */
+export function followUpPrompt(p: {
+  subject: string
+  topic?: string
+  analysis: string
+  history: { question: string; quote?: string; answer: string }[]
+  question: string
+  quote?: string
+  hasImages: boolean
+}): string {
+  const past = p.history
+    .slice(-6)
+    .map((h) => `Öğrenci: ${h.quote ? `(şu kısım hakkında: "${h.quote.slice(0, 300)}") ` : ''}${h.question}\nSen: ${h.answer.slice(0, 1500)}`)
+    .join('\n\n')
+  return `Öğrencinin kendi başına çözemediği bir ${p.subject}${p.topic ? ` (${p.topic})` : ''} sorusunu${p.hasImages ? ' (görsel ekte)' : ''} daha önce analiz ettin. Analizin aşağıda. Öğrenci şimdi bu analizle ilgili soru soruyor; birebir özel ders gibi cevap ver.
+
+<senin_analizin>
+${p.analysis.slice(0, 8000)}
+</senin_analizin>
+${past ? `\n<onceki_sorular>\n${past}\n</onceki_sorular>\n` : ''}
+${p.quote ? `Öğrencinin analizde işaret ettiği kısım: "${p.quote.slice(0, 600)}"\n` : ''}Öğrencinin sorusu: ${p.question}
+
+Kurallar: Yalnızca sorduğu şeye odaklan, analizin tamamını tekrar etme. Anlamadığı yeri daha küçük adımlara böl ya da farklı bir yoldan / somut bir sayı örneğiyle anlat. "Neden böyle?" diyorsa o adımın arkasındaki kuralı ve onu soruda neyin tetiklediğini açıkla. Analizinde bir hata fark edersen açıkça düzelt. Kısa tut (gerekirse birkaç kısa paragraf ya da madde); sonunda gerekirse anlayıp anlamadığını yoklayan tek bir mini soru sor.`
+}
+
 export function similarPrompt(p: { subject: string; topic?: string; count: number; analysis?: string }): string {
   return `Ekteki görseldeki ${p.subject}${p.topic ? ` (${p.topic})` : ''} sorusuna BENZER, aynı kazanımı ölçen ve aynı tuzağı içeren ${p.count} yeni soru yaz. YKS (ÖSYM) tarzında, 5 seçenekli (A-E) olsun; zorluk orijinale yakın, biri biraz daha zor olabilir.${
     p.analysis ? `\nÖğrencinin bu soruda yaptığı hatanın analizi (bu zayıflığı hedefle):\n${p.analysis.slice(0, 1500)}` : ''

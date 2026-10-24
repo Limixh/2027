@@ -1,8 +1,8 @@
 {
-  "version": "1.7.0",
-  "file": "app-1.7.0.json.gz",
-  "sha256": "5f8c265f874a290f64b169bf2115c8e42e53d3d35a0e9f3875cfa0394f15fa3c",
+  "version": "1.7.1",
+  "file": "app-1.7.1.json.gz",
+  "sha256": "ea9df450a12a63c921d98a8323eb57bb30cb8a024dc369b67fbf4a16c8039ddb",
   "minShell": "1.1.0",
-  "notes": "İkinci Beyin: beceri tekrarı, önkoşullar ve kök neden, onaylı hafıza düzenleme ve geri alma, toplu analiz, Genel Bakış odak kartı",
+  "notes": "Analize soru sorabilirsin (şurayı tekrar anlat); Hafızayı düzenle düğmesi daha görünür",
   "date": "2026-10-24"
 }

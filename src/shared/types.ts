@@ -118,6 +118,8 @@ export interface MistakeNote {
   aiAnalyzedAt?: string
   /** Analizi yazan model (ör. "Claude Opus 5.5 · abonelik") */
   aiModel?: string
+  /** Analiz hakkında öğrencinin sorduğu sorular ve AI'nin cevapları ("şurayı tekrar anlat") */
+  followUps?: { id: string; question: string; quote?: string; answer: string; model?: string; createdAt: string }[]
   /** AI'nin ürettiği benzer soru setleri (Markdown; cevaplar '---CEVAPLAR---' satırından sonra) */
   similar?: { id: string; markdown: string; createdAt: string; model?: string }[]
   /** Tekrar çözme geçmişi (help: çözüme bakarak çözdü) */

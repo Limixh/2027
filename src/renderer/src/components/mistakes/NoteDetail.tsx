@@ -15,6 +15,7 @@ import { skillStrength, STATUS_COLOR, STATUS_LABEL } from '@/lib/brain'
 import { useNav } from '@/lib/nav'
 import { KINDS } from './MistakeModal'
 import { NoteImage } from './NoteImage'
+import { FollowUps } from './FollowUps'
 
 const Md = ({ children }: { children: string }): React.JSX.Element => (
   <div className="prose-ai">
@@ -80,6 +81,7 @@ export function NoteDetail({
   const [count, setCount] = useState(3)
   const [shown, setShown] = useState<Record<string, boolean>>({})
   const busy = useRef(false)
+  const analysisRef = useRef<HTMLDivElement>(null)
 
   const imgs = useMemo(() => [...(note?.questionImages ?? []), ...(note?.attemptImages ?? [])], [note?.questionImages, note?.attemptImages])
   if (!note) return null
@@ -403,12 +405,17 @@ export function NoteDetail({
           )}
           {analysisBody ? (
             <div className={cn(analyzing && 'opacity-90')}>
-              <Md>{analysisBody}</Md>
+              <div ref={analysisRef}>
+                <Md>{analysisBody}</Md>
+              </div>
               {analyzing && <div className="mt-2 text-xs text-subtle">Yazılıyor…</div>}
               {!analyzing && note.aiAnalyzedAt && (
                 <div className="mt-2 text-[11px] text-subtle">
                   {formatDate(note.aiAnalyzedAt.slice(0, 10))} tarihinde analiz edildi{note.aiModel && ` · ${note.aiModel}`}
                 </div>
+              )}
+              {!analyzing && note.aiAnalysis && (
+                <FollowUps note={note} subject={subject?.name ?? 'YKS'} topic={topic?.name} images={imgs} analysisRef={analysisRef} />
               )}
             </div>
           ) : analyzing ? (
