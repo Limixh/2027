@@ -128,6 +128,28 @@ function AiSettings(): React.JSX.Element {
           />
         </Field>
       </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <Field label="Tahtada çözüm" hint="Soru sayfasında AI soruyu tahtada adım adım el yazısıyla çözer">
+          <Segmented
+            value={settings.boardSolutions ?? true ? 'on' : 'off'}
+            onChange={(v) => update({ boardSolutions: v === 'on' })}
+            options={[
+              { value: 'on', label: 'Açık' },
+              { value: 'off', label: 'Kapalı' }
+            ]}
+          />
+        </Field>
+        <Field label="Tahtayı sesli anlat" hint="Windows'ta Türkçe ses yüklüyse onunla okur; tahtanın altından da açılıp kapanır">
+          <Segmented
+            value={settings.boardVoice ? 'on' : 'off'}
+            onChange={(v) => update({ boardVoice: v === 'on' })}
+            options={[
+              { value: 'on', label: 'Açık' },
+              { value: 'off', label: 'Kapalı' }
+            ]}
+          />
+        </Field>
+      </div>
       {settings.aiProvider === 'api' && (
       <div className="mt-5 rounded-xl border border-border bg-surface-2/60 p-4">
         <div className="mb-2 flex items-center gap-2 text-sm font-medium">

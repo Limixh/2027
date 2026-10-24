@@ -118,6 +118,8 @@ export interface MistakeNote {
   aiAnalyzedAt?: string
   /** Analizi yazan model (ör. "Claude Opus 5.5 · abonelik") */
   aiModel?: string
+  /** Tahtada adım adım çözüm (el yazısıyla yazılıyormuş gibi oynatılır) */
+  board?: BoardSolution
   /** Analiz hakkında öğrencinin sorduğu sorular ve AI'nin cevapları ("şurayı tekrar anlat") */
   followUps?: { id: string; question: string; quote?: string; answer: string; model?: string; createdAt: string }[]
   /** AI'nin ürettiği benzer soru setleri (Markdown; cevaplar '---CEVAPLAR---' satırından sonra) */
@@ -142,6 +144,34 @@ export interface MistakeNote {
   comments?: { id: string; date: string; text: string }[]
   /** Bu soruyla ilişkili beceriler (İkinci Beyin) */
   skillIds?: string[]
+}
+
+/** Tahtaya yazılan tek satır */
+export interface BoardLine {
+  /** Satır (matematik düz metin: x^2, √3, 3/4) */
+  text: string
+  /** Satırın yanına küçük not (ör. "iki tarafı x ile çarp") */
+  note?: string
+  /** Vurgu */
+  mark?: 'circle' | 'underline' | 'box' | 'strike'
+  /** ink: normal · blue: verilenler · red: dikkat / hata · green: sonuç */
+  color?: 'ink' | 'blue' | 'red' | 'green'
+}
+
+/** Tahtada bir adım: öğretmenin söylediği + tahtaya eklediği satırlar */
+export interface BoardStep {
+  say: string
+  lines: BoardLine[]
+  /** Tahtayı silip yeni sayfaya geç */
+  clear?: boolean
+}
+
+export interface BoardSolution {
+  steps: BoardStep[]
+  /** same: analizdeki yolla · different: farklı bir yöntemle */
+  mode: 'same' | 'different'
+  model?: string
+  createdAt: string
 }
 
 /**
@@ -266,6 +296,10 @@ export interface Settings {
   codexModel?: string
   aiModel: string
   aiEffort: 'low' | 'medium' | 'high'
+  /** Soru sayfasında "Tahtada çöz" özelliği (varsayılan açık) */
+  boardSolutions?: boolean
+  /** Tahtada çözümü sesli anlat (varsayılan kapalı) */
+  boardVoice?: boolean
   pomodoroMinutes: number
   breakMinutes: number
 }

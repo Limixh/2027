@@ -1,8 +1,8 @@
 {
-  "version": "1.7.3",
-  "file": "app-1.7.3.json.gz",
-  "sha256": "aaef69a692bb8e95212b2cbb5ffaca89ec6180fcbc86e860c62adcc2677b017e",
+  "version": "1.8.0",
+  "file": "app-1.8.0.json.gz",
+  "sha256": "ac0dbd0098f16fd4796c21b19878b101435b4392c10c87d196d11fc096216f55",
   "minShell": "1.1.0",
-  "notes": "İkinci Beyin AI'ye yalnızca alakalı hafızayı gönderiyor (daha az kullanım)",
+  "notes": "Tahtada çözüm: AI soruyu el yazısıyla adım adım tahtada çözer, istersen sesli anlatır (Ayarlar'dan açılıp kapanır)",
   "date": "2026-10-24"
 }

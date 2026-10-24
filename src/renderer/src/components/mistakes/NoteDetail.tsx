@@ -16,6 +16,7 @@ import { useNav } from '@/lib/nav'
 import { KINDS } from './MistakeModal'
 import { NoteImage } from './NoteImage'
 import { FollowUps } from './FollowUps'
+import { BoardPanel } from '@/components/board/BoardPanel'
 
 const Md = ({ children }: { children: string }): React.JSX.Element => (
   <div className="prose-ai">
@@ -165,6 +166,7 @@ export function NoteDetail({
   const [shown, setShown] = useState<Record<string, boolean>>({})
   const busy = useRef(false)
   const analysisRef = useRef<HTMLDivElement>(null)
+  const boardOn = useStore((s) => s.data.settings.boardSolutions ?? true)
 
   const imgs = useMemo(() => [...(note?.questionImages ?? []), ...(note?.attemptImages ?? [])], [note?.questionImages, note?.attemptImages])
   if (!note) return null
@@ -537,6 +539,12 @@ export function NoteDetail({
             )
           )}
         </Section>
+
+        {boardOn && (
+          <Section title="Tahtada çözüm">
+            <BoardPanel note={note} />
+          </Section>
+        )}
 
         <Section
           title="Benzer sorular"
