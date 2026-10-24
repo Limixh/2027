@@ -16,6 +16,7 @@ import SettingsPage from './pages/Settings'
 import Focus from './pages/Focus'
 import Room from './pages/Room'
 import Practice from './pages/Practice'
+import Brain from './pages/Brain'
 
 const PAGES = {
   dashboard: Dashboard,
@@ -28,7 +29,8 @@ const PAGES = {
   settings: SettingsPage,
   focus: Focus,
   room: Room,
-  practice: Practice
+  practice: Practice,
+  brain: Brain
 }
 
 function useTheme(): void {

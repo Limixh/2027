@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpenCheck,
+  BrainCircuit,
   Bot,
   CalendarClock,
   ClipboardList,
@@ -34,6 +35,7 @@ const NAV: { id: PageId; label: string; icon: React.ElementType }[] = [
   { id: 'topics', label: 'Konu Takibi', icon: BookOpenCheck },
   { id: 'analysis', label: 'Hata Analizi', icon: BarChart3 },
   { id: 'mistakes', label: 'Hata Defteri', icon: NotebookPen },
+  { id: 'brain', label: 'İkinci Beyin', icon: BrainCircuit },
   { id: 'ai', label: 'AI Koç', icon: Bot },
   { id: 'focus', label: 'Sayaç', icon: AlarmClock }
 ]

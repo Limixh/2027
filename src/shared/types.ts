@@ -132,6 +132,41 @@ export interface MistakeNote {
   usedSolution?: boolean
   /** Öğrencinin tarihli yorumları: "x'i yapmıştım ama şurada takıldım" */
   comments?: { id: string; date: string; text: string }[]
+  /** Bu soruyla ilişkili beceriler (İkinci Beyin) */
+  skillIds?: string[]
+}
+
+/**
+ * İkinci Beyin: konudan bağımsız beceri / yöntem / kavram.
+ * ör. "Denklem sisteminde yok etme yöntemi" — hem 2 bilinmeyenli denklemlerde hem parabol sorularında çıkabilir.
+ */
+export interface Skill {
+  id: string
+  name: string
+  /** Becerinin kısa tanımı (AI veya öğrenci) */
+  description?: string
+  /** Bu becerinin görüldüğü konular (farklı derslerden olabilir) */
+  topicIds: string[]
+  /** Kanıtlar: hangi soruda eksik çıktı / başarıyla kullanıldı */
+  evidence: SkillEvidence[]
+  /** Öğrencinin kendi notu (Markdown) */
+  note?: string
+  /** AI'nin ürettiği mini ders (Markdown) */
+  lesson?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SkillEvidence {
+  id: string
+  date: string
+  /** eksik: bu soruda yapamadı · zayif: zorlandı/çözüme baktı · basari: doğru kullandı */
+  kind: 'eksik' | 'zayif' | 'basari'
+  /** Bu soruda becerinin nasıl rol oynadığı */
+  detail?: string
+  noteId?: string
+  topicId?: string
+  source: 'ai' | 'tekrar' | 'manuel'
 }
 
 /** Soru pratiği seti: ör. 20 paragraf 28 dk, 17D 2Y 1B */
@@ -260,6 +295,7 @@ export interface AppData {
   /** tarih -> günlük plan */
   plans: Record<string, DailyPlan>
   practiceSets: PracticeSet[]
+  skills: Skill[]
 }
 
 /** Sohbete eklenen dosya (userData/attachments altında saklanır) */

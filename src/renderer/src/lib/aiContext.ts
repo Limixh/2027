@@ -2,6 +2,7 @@
 import type { AppData } from '../../../shared/types'
 import { CURRICULUM_NOTE, SUBJECTS, SUBJECT_MAP, TOPIC_MAP, subjectsFor } from '@/data/curriculum'
 import { addDays, formatMinutes, todayKey, weekdayName } from './date'
+import { memoryForPrompt } from './brain'
 import { estimateField, estimateTyt, FIELD_LABEL, fmtNet, MISTAKE_KIND_LABEL, net, placement, totalNet, totals, tytGroupNets } from './exam'
 import {
   bySubject,
@@ -197,6 +198,17 @@ export function buildContext(data: AppData): string {
       const topic = m.topicId ? ` / ${TOPIC_MAP[m.topicId]?.name}` : ''
       push(`- [${MISTAKE_KIND_LABEL[m.kind]}] ${SUBJECT_MAP[m.subjectId]?.name ?? ''}${topic}: ${m.text.slice(0, 200)}${m.lesson ? ` → Ders: ${m.lesson.slice(0, 150)}` : ''}`)
     }
+  }
+
+  // İkinci Beyin: konudan bağımsız beceri hafızası
+  const memory = memoryForPrompt(data, { limit: 30 })
+  if (memory) {
+    push(
+      '',
+      '## İkinci Beyin — beceri hafızası (en zayıftan güçlüye)',
+      'Not: Bir konudaki sorunun kökü başka konudaki bir beceri eksikliği olabilir. Plan ve önerilerde konu yerine bu kök becerileri hedeflemeyi düşün.',
+      memory
+    )
   }
 
   // Günlük planlar (bugün ve yarın)

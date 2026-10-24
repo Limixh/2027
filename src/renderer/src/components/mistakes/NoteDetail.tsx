@@ -11,6 +11,7 @@ import { AiError, TUTOR_SYSTEM, analysisPrompt, askAi, similarPrompt, splitNoteM
 import { resolveTopic } from '@/lib/aiActions'
 import { uid } from '@/lib/id'
 import { useStore } from '@/lib/store'
+import { memoryForPrompt } from '@/lib/brain'
 import { KINDS } from './MistakeModal'
 import { NoteImage } from './NoteImage'
 
@@ -96,7 +97,8 @@ export function NoteDetail({
           correctAnswer: note.correctAnswer,
           myAnswer: note.myAnswer,
           usedSolution: note.usedSolution || note.kind === 'cozum',
-          comments: note.comments
+          comments: note.comments,
+          memory: memoryForPrompt(useStore.getState().data, { subjectId: note.subjectId }) || undefined
         }),
         attachments: imgs.length ? imgs : undefined,
         onText: setLive
@@ -114,6 +116,8 @@ export function NoteDetail({
         if (meta.summary && !cur.text.trim()) patch.text = meta.summary
       }
       update(id, patch)
+      // (konu güncellendikten sonra) İkinci Beyin: becerileri hafızaya işle (farklı konulardaki aynı beceri burada buluşur)
+      if (meta?.skills?.length) useStore.getState().applySkillAnalysis(id, meta.skills.filter((x) => x && typeof x.name === 'string'))
       setLive('')
     } catch (e) {
       setError(errText(e))

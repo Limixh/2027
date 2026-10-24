@@ -2,6 +2,7 @@
 // Ayarlardaki bağlantı türünü kullanır: Claude aboneliği (CLI), ChatGPT (Codex) veya Claude API.
 import type { ChatAttachment } from '../../../shared/types'
 import { buildCliPrompt } from './aiContext'
+import { repairJson } from './aiActions'
 import { uid } from './id'
 import { useStore } from './store'
 
@@ -68,6 +69,8 @@ export function analysisPrompt(p: {
   myAnswer?: string
   usedSolution?: boolean
   comments?: { date: string; text: string }[]
+  /** İkinci Beyin hafızası (memoryForPrompt çıktısı) */
+  memory?: string
 }): string {
   const facts = [
     p.comments?.length
@@ -96,9 +99,21 @@ ${
     : ''
 }## Bu soruyu bir daha kaçırmamak için
 2-4 madde: hangi kural/kavram, hangi tuzak, hangi kontrol alışkanlığı.
+${
+  p.memory
+    ? `## Hafızadan: daha önce de olmuş mu?
+Aşağıdaki "öğrencinin beceri hafızası"na bak. Bu sorudaki takılma, daha önce BAŞKA bir konuda da görülmüş bir beceri eksikliğiyle aynı köke sahipse bunu açıkça bağla (ör. "Bu parabol sorusunda kesişim noktasını bulurken takıldığın adım, 2 bilinmeyenli denklemlerde zorlandığın yok etme yöntemiyle aynı"). Bağlantı yoksa bu başlığı tek cümleyle geç.
 
+<ogrencinin_beceri_hafizasi>
+${p.memory}
+</ogrencinin_beceri_hafizasi>
+`
+    : ''
+}
 En sonda tek bir kod bloğu ekle (dili yks-note), içinde yalnızca JSON:
-{"topic":"konunun müfredattaki adı","kind":"bilgi|dikkat|sure|yorum|bos|cozum","summary":"hatanın tek cümlelik özeti","lesson":"akılda tutulacak tek cümle"}`
+{"topic":"konunun müfredattaki adı","kind":"bilgi|dikkat|sure|yorum|bos|cozum","summary":"hatanın tek cümlelik özeti","lesson":"akılda tutulacak tek cümle","skills":[{"id":"hafızadaki id (aynı beceriyse) ya da boş","name":"beceri adı","role":"eksik|zayif|basari","detail":"bu soruda bu becerinin rolü, 1 cümle","description":"yeni beceriyse kısa genel tanım"}]}
+
+skills kuralları: Soruyu çözmek için gereken 1-4 temel beceri/yöntem/kavramı yaz. Beceri adı KONUDAN BAĞIMSIZ ve yeniden kullanılabilir olsun (ör. "Denklem sisteminde yok etme yöntemi", "Kesirli ifadelerde payda eşitleme", "Geri koymadan olasılıkta koşullu olasılık", "Paragrafta ana düşünceyi yardımcıdan ayırma"); "parabol sorusu" gibi konu adları beceri değildir. Hafızada aynı ya da çok yakın bir beceri varsa YENİ AD UYDURMA, onun id'sini ve adını aynen kullan. role: öğrencinin yapamadığı adım = eksik, zorlandığı/çözüme baktığı = zayif, doğru kullandığı = basari.`
 }
 
 export function similarPrompt(p: { subject: string; topic?: string; count: number; analysis?: string }): string {
@@ -120,13 +135,19 @@ A) ... B) ... C) ... D) ... E) ...
 /** Analiz metninin sonundaki yks-note bloğunu ayırır */
 export function splitNoteMeta(text: string): {
   body: string
-  meta: { topic?: string; kind?: string; summary?: string; lesson?: string } | null
+  meta: {
+    topic?: string
+    kind?: string
+    summary?: string
+    lesson?: string
+    skills?: { id?: string; name: string; role?: string; detail?: string; description?: string }[]
+  } | null
 } {
   const m = text.match(/```yks-note\s*([\s\S]*?)```/)
   if (!m) return { body: text.trim(), meta: null }
   let meta = null
   try {
-    meta = JSON.parse(m[1].trim())
+    meta = JSON.parse(repairJson(m[1].trim()))
   } catch {
     meta = null
   }

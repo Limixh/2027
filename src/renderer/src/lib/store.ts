@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import type {
   AppData,
   Countdown,
+  Skill,
+  SkillEvidence,
   PracticeSet,
   DailyPlan,
   PlanTask,
@@ -47,7 +49,8 @@ export const emptyData = (): AppData => ({
   chats: [],
   countdowns: [],
   plans: {},
-  practiceSets: []
+  practiceSets: [],
+  skills: []
 })
 
 /** Eski/eksik veriyi güncel şemaya tamamla */
@@ -65,7 +68,8 @@ export function normalize(raw: Partial<AppData> | null | undefined): AppData {
     chats: Array.isArray(raw.chats) ? raw.chats : [],
     countdowns: Array.isArray(raw.countdowns) ? raw.countdowns : [],
     plans: raw.plans && typeof raw.plans === 'object' ? raw.plans : {},
-    practiceSets: Array.isArray(raw.practiceSets) ? raw.practiceSets : []
+    practiceSets: Array.isArray(raw.practiceSets) ? raw.practiceSets : [],
+    skills: Array.isArray(raw.skills) ? raw.skills : []
   }
 }
 
@@ -150,6 +154,17 @@ interface Store {
   /** Hata defterindeki soruyu tekrar çözme sonucu (aralıklı tekrar) */
   /** help: çözüme bakarak çözdü (çözüldü sayılmaz, 2 gün sonra tekrar) */
   recordRetry(noteId: string, solved: boolean, help?: boolean): void
+
+  /**
+   * AI analizinden gelen becerileri hafızaya işler: mevcut beceriyle (id veya ad) eşleşirse ona kanıt ekler,
+   * yoksa yeni beceri açar; notu becerilere bağlar. Farklı konulardaki sorular böylece aynı beceride buluşur.
+   */
+  applySkillAnalysis(noteId: string, items: { id?: string; name: string; role?: string; detail?: string; description?: string }[]): string[]
+  updateSkill(id: string, patch: Partial<Skill>): void
+  deleteSkill(id: string): void
+  /** source becerisini target'a katar (kanıtlar, konular ve bağlı notlar taşınır) */
+  mergeSkills(targetId: string, sourceId: string): void
+  addSkillEvidence(skillId: string, ev: Omit<SkillEvidence, 'id'>): void
 
   addCountdown(c: Omit<Countdown, 'id'>): void
   deleteCountdown(id: string): void
@@ -417,6 +432,117 @@ export const useStore = create<Store>((set, get) => {
       const learned = streak >= 3
       const next = learned ? undefined : addDays(todayKey(), solved ? intervals[Math.min(streak, 3)] : help ? 2 : 1)
       get().updateMistakeNote(noteId, { retries, nextReview: next, resolved: learned || note.resolved, inbox: false })
+      // Hafıza: bağlı becerilere tekrar sonucunu kanıt olarak işle
+      for (const sid of note.skillIds ?? []) {
+        get().addSkillEvidence(sid, {
+          date: todayKey(),
+          kind: solved ? 'basari' : help ? 'zayif' : 'eksik',
+          detail: solved ? 'Tekrar çözümünde doğru yaptı' : help ? 'Tekrar çözümünde çözüme baktı' : 'Tekrar çözümünde yine yapamadı',
+          noteId,
+          topicId: note.topicId,
+          source: 'tekrar'
+        })
+      }
+    },
+
+    applySkillAnalysis(noteId, items) {
+      const note = get().data.mistakeNotes.find((m) => m.id === noteId)
+      if (!note || !items.length) return []
+      const fold = (s: string): string =>
+        s
+          .toLocaleLowerCase('tr')
+          .replace(/[çğıöşü]/g, (c) => ({ ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u' })[c] ?? c)
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim()
+      const ids: string[] = []
+      mutate((d) => {
+        const skills = d.skills.slice()
+        for (const it of items) {
+          const name = it.name?.trim()
+          if (!name) continue
+          let idx = it.id ? skills.findIndex((s) => s.id === it.id) : -1
+          if (idx < 0) idx = skills.findIndex((s) => fold(s.name) === fold(name))
+          const kind: SkillEvidence['kind'] = it.role === 'basari' || it.role === 'kullandi' ? 'basari' : it.role === 'zayif' ? 'zayif' : 'eksik'
+          // Aynı not için aynı beceriye ikinci kez kanıt yazma (yeniden analizde)
+          const ev: SkillEvidence = { id: uid(), date: note.date, kind, detail: it.detail, noteId, topicId: note.topicId, source: 'ai' }
+          if (idx < 0) {
+            skills.push({
+              id: uid(),
+              name,
+              description: it.description,
+              topicIds: note.topicId ? [note.topicId] : [],
+              evidence: [ev],
+              createdAt: now(),
+              updatedAt: now()
+            })
+            idx = skills.length - 1
+          } else {
+            const s = skills[idx]
+            skills[idx] = {
+              ...s,
+              description: s.description || it.description,
+              topicIds: note.topicId && !s.topicIds.includes(note.topicId) ? [...s.topicIds, note.topicId] : s.topicIds,
+              evidence: [...s.evidence.filter((e) => !(e.noteId === noteId && e.source === 'ai')), ev],
+              updatedAt: now()
+            }
+          }
+          if (!ids.includes(skills[idx].id)) ids.push(skills[idx].id)
+        }
+        return {
+          ...d,
+          skills,
+          mistakeNotes: d.mistakeNotes.map((m) => (m.id === noteId ? { ...m, skillIds: ids } : m))
+        }
+      })
+      return ids
+    },
+    updateSkill(id, patch) {
+      mutate((d) => ({ ...d, skills: d.skills.map((s) => (s.id === id ? { ...s, ...patch, updatedAt: now() } : s)) }))
+    },
+    deleteSkill(id) {
+      mutate((d) => ({
+        ...d,
+        skills: d.skills.filter((s) => s.id !== id),
+        mistakeNotes: d.mistakeNotes.map((m) => (m.skillIds?.includes(id) ? { ...m, skillIds: m.skillIds.filter((x) => x !== id) } : m))
+      }))
+    },
+    mergeSkills(targetId, sourceId) {
+      if (targetId === sourceId) return
+      mutate((d) => {
+        const t = d.skills.find((s) => s.id === targetId)
+        const src = d.skills.find((s) => s.id === sourceId)
+        if (!t || !src) return d
+        const merged: Skill = {
+          ...t,
+          topicIds: [...new Set([...t.topicIds, ...src.topicIds])],
+          evidence: [...t.evidence, ...src.evidence].sort((a, b) => a.date.localeCompare(b.date)),
+          note: [t.note, src.note].filter(Boolean).join('\n\n') || undefined,
+          description: t.description || src.description,
+          updatedAt: now()
+        }
+        return {
+          ...d,
+          skills: d.skills.filter((s) => s.id !== sourceId).map((s) => (s.id === targetId ? merged : s)),
+          mistakeNotes: d.mistakeNotes.map((m) =>
+            m.skillIds?.includes(sourceId) ? { ...m, skillIds: [...new Set(m.skillIds.map((x) => (x === sourceId ? targetId : x)))] } : m
+          )
+        }
+      })
+    },
+    addSkillEvidence(skillId, ev) {
+      mutate((d) => ({
+        ...d,
+        skills: d.skills.map((s) =>
+          s.id === skillId
+            ? {
+                ...s,
+                evidence: [...s.evidence, { ...ev, id: uid() }],
+                topicIds: ev.topicId && !s.topicIds.includes(ev.topicId) ? [...s.topicIds, ev.topicId] : s.topicIds,
+                updatedAt: now()
+              }
+            : s
+        )
+      }))
     },
 
     addCountdown(c) {
