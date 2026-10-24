@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { UpdateBanner } from './components/UpdateBanner'
-import { ConfirmHost, ToastHost } from './components/ui'
+import { ConfirmHost, toast, ToastHost } from './components/ui'
+import { addDays, todayKey } from './lib/date'
 import { useNav } from './lib/nav'
 import { useStore } from './lib/store'
 import Dashboard from './pages/Dashboard'
@@ -14,6 +15,7 @@ import AiCoach from './pages/AiCoach'
 import SettingsPage from './pages/Settings'
 import Focus from './pages/Focus'
 import Room from './pages/Room'
+import Practice from './pages/Practice'
 
 const PAGES = {
   dashboard: Dashboard,
@@ -25,7 +27,8 @@ const PAGES = {
   ai: AiCoach,
   settings: SettingsPage,
   focus: Focus,
-  room: Room
+  room: Room,
+  practice: Practice
 }
 
 function useTheme(): void {
@@ -58,6 +61,28 @@ export default function App(): React.JSX.Element {
   useEffect(() => {
     void init()
   }, [init])
+
+  // Telefondan gelen soru fotoğraflarını Hata Defteri'ne ekle (uygulama açıkken her sayfada)
+  useEffect(() => {
+    if (!window.api) return
+    return window.api.phone.onUpload((u) => {
+      const st = useStore.getState()
+      st.addMistakeNote({
+        subjectId: u.subjectId,
+        topicId: u.topicId,
+        text: u.note,
+        kind: 'bilgi',
+        resolved: false,
+        date: todayKey(),
+        source: u.source,
+        questionImages: u.questionImages,
+        attemptImages: u.attemptImages.length ? u.attemptImages : undefined,
+        inbox: true,
+        nextReview: addDays(todayKey(), 1)
+      })
+      toast('📱 Telefondan yeni soru geldi — Hata Defteri', 'info')
+    })
+  }, [])
 
   if (!ready) {
     return (

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AiChatRequest, CliChatRequest, AiStreamEvent, AppData, DesktopApi, UpdateStatus } from '../shared/types'
+import type { AiChatRequest, CliChatRequest, AiStreamEvent, AppData, DesktopApi, PhoneUpload, UpdateStatus } from '../shared/types'
 
 const api: DesktopApi = {
   isDesktop: true,
@@ -31,6 +31,16 @@ const api: DesktopApi = {
     }
   },
   openExternal: (url: string) => ipcRenderer.invoke('shell:open', url),
+  phone: {
+    start: (catalogJson: string) => ipcRenderer.invoke('phone:start', catalogJson),
+    stop: () => ipcRenderer.invoke('phone:stop'),
+    info: () => ipcRenderer.invoke('phone:info'),
+    onUpload: (cb: (u: PhoneUpload) => void) => {
+      const listener = (_e: unknown, u: PhoneUpload): void => cb(u)
+      ipcRenderer.on('phone:upload', listener)
+      return () => ipcRenderer.removeListener('phone:upload', listener)
+    }
+  },
   update: {
     status: () => ipcRenderer.invoke('update:status'),
     check: () => ipcRenderer.invoke('update:check'),

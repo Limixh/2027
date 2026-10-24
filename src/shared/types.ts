@@ -323,6 +323,22 @@ export interface UpdateStatus {
   error?: string
 }
 
+/** Telefondan gelen soru yüklemesi */
+export interface PhoneUpload {
+  subjectId: string
+  topicId?: string
+  note: string
+  source?: string
+  questionImages: ChatAttachment[]
+  attemptImages: ChatAttachment[]
+}
+
+export interface PhoneServerInfo {
+  running: boolean
+  urls: string[]
+  received: number
+}
+
 export interface DesktopApi {
   isDesktop: true
   loadData(): Promise<AppData | null>
@@ -349,6 +365,12 @@ export interface DesktopApi {
     onEvent(cb: (ev: AiStreamEvent) => void): () => void
   }
   openExternal(url: string): Promise<void>
+  phone: {
+    start(catalogJson: string): Promise<PhoneServerInfo>
+    stop(): Promise<PhoneServerInfo>
+    info(): Promise<PhoneServerInfo>
+    onUpload(cb: (u: PhoneUpload) => void): () => void
+  }
   update: {
     status(): Promise<UpdateStatus>
     check(): Promise<UpdateStatus>

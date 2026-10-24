@@ -6,6 +6,7 @@ import * as ai from './ai'
 import * as cli from './claudeCli'
 import * as codex from './codexCli'
 import { saveAttachment } from './attachments'
+import * as phone from './phoneServer'
 import * as updater from './updater'
 import type { AiChatRequest, AppData, CliChatRequest } from '../shared/types'
 
@@ -134,6 +135,9 @@ function registerIpc(): void {
     void ai.chat(e.sender, req)
   })
   ipcMain.handle('ai:abort', (_e, id: string) => ai.abort(id))
+  ipcMain.handle('phone:start', (e, catalogJson: string) => phone.start(e.sender, catalogJson))
+  ipcMain.handle('phone:stop', () => phone.stop())
+  ipcMain.handle('phone:info', () => phone.info())
   ipcMain.handle('update:status', () => updater.getStatus())
   ipcMain.handle('update:check', (e) => updater.check(e.sender))
   ipcMain.handle('update:install', () => updater.install())
