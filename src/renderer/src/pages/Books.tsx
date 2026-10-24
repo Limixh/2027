@@ -97,7 +97,7 @@ function BookForm({ book, onClose }: { book: Book; onClose: () => void }): React
         </div>
         <Field
           label="Sayfa kayması"
-          hint="PDF sayfası = kitaptaki sayfa numarası + bu sayı. Çoğu kitapta 0'dır; kapak / içindekiler sayfa numarası almıyorsa artı olur. Soru seçerken oklarla da düzeltebilirsin."
+          hint="Çoğu kitapta 0'dır. Araya eklenmiş reklam sayfaları zaten otomatik atlanır; bu sayı yalnızca kitabın kendi sayfa numaralandırması kayıksa (ör. kapak numara almıyorsa) gerekir. Soru seçerken oklarla da düzeltebilirsin."
         >
           <Input type="number" value={offset} onChange={(e) => setOffset(e.target.value)} className="w-28" />
         </Field>
@@ -192,6 +192,7 @@ export default function Books(): React.JSX.Element {
                   {b.pages && <span>{b.pages} sayfa</span>}
                   <span>{mb(b.size)}</span>
                   {b.pageOffset !== 0 && <span>kayma {b.pageOffset > 0 ? '+' : ''}{b.pageOffset}</span>}
+                  {!!b.insertedPages?.length && <span title="Paylaşılan PDF'e sonradan eklenmiş reklam / kanal sayfaları; sayfa sayarken atlanır">{b.insertedPages.length} eklenmiş sayfa atlanıyor</span>}
                   <span>{used} soru alındı</span>
                   <span>{formatDate(b.createdAt.slice(0, 10))}</span>
                 </div>

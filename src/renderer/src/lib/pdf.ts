@@ -409,6 +409,60 @@ export async function detectQuestions(img: PageImage): Promise<Detection> {
   return { boxes: [], method: 'none' }
 }
 
+/* ---------------- araya eklenmiş sayfalar ---------------- */
+
+/**
+ * Paylaşılan PDF'lerde araya reklam / kanal sayfaları eklenebiliyor; bu yüzden kitap sayfası ile
+ * PDF sayfası arasındaki fark kitap ilerledikçe büyür. Bu sayfalar metin katmanından ayırt edilir:
+ * kitabın asıl sayfaları aynı "imzayı" taşır (ör. hepsinde aynı filigran ya da hiç metin yok),
+ * eklenen sayfalar farklıdır. Resim çözülmediği için tüm kitap birkaç saniyede taranır.
+ * Asıl sayfaların imzası %85'ten az sayfada ortaksa (normal dijital kitap) hiçbir sayfa atlanmaz.
+ */
+export async function findInsertedPages(doc: PDFDocumentProxy, onProgress?: (done: number, total: number) => void): Promise<number[]> {
+  const n = doc.numPages
+  const sigs: string[] = []
+  for (let p = 1; p <= n; p++) {
+    const page = await doc.getPage(p)
+    const tc = await page.getTextContent()
+    // Rakamlar (sayfa numarası vb.) imzayı bozmasın
+    sigs.push(
+      tc.items
+        .map((i) => ('str' in i ? i.str : ''))
+        .join(' ')
+        .replace(/\d+/g, '#')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 120)
+    )
+    page.cleanup()
+    if (p % 20 === 0) onProgress?.(p, n)
+  }
+  const count = new Map<string, number>()
+  for (const s of sigs) count.set(s, (count.get(s) ?? 0) + 1)
+  const [main, mainCount] = [...count.entries()].sort((a, b) => b[1] - a[1])[0] ?? ['', 0]
+  if (mainCount < n * 0.85) return []
+  return sigs.map((s, i) => (s === main ? 0 : i + 1)).filter(Boolean)
+}
+
+/**
+ * Kitap sayfası → PDF sayfası: araya eklenen sayfalar atlanarak sayılır, sonra kitabın kayması eklenir.
+ * Elle düzeltilmiş sayfa (pageMap) her zaman önceliklidir.
+ */
+export function pdfPageFor(bookPage: number, opts: { offset: number; inserted?: number[]; pageMap?: Record<string, number>; numPages: number }): number {
+  const manual = opts.pageMap?.[bookPage]
+  if (manual) return manual
+  const skip = new Set(opts.inserted ?? [])
+  let target = bookPage + opts.offset
+  if (!skip.size) return target
+  // target'ıncı asıl sayfayı bul
+  let seen = 0
+  for (let p = 1; p <= opts.numPages; p++) {
+    if (skip.has(p)) continue
+    if (++seen === target) return p
+  }
+  return opts.numPages + 1
+}
+
 /* ---------------- numaraları görüntüden okuma ---------------- */
 
 /** Numara görüntüleri bu yüksekliğe ölçeklenip karşılaştırılır */
@@ -419,9 +473,12 @@ interface Grid {
   g: Uint8Array
 }
 
-/** İkili maskeyi GH yüksekliğe ölçekle (en-boy oranı korunur: genişlik basamak sayısını taşır) */
-function toGrid(on: (x: number, y: number) => boolean, w: number, h: number): Grid {
-  const gw = Math.max(1, Math.round((w * GH) / h))
+/**
+ * İkili maskeyi GH yüksekliğe ölçekle. gw verilmezse en-boy oranı korunur; verilirse o genişliğe
+ * esnetilir (dar / geniş yazı tiplerini şablonla karşılaştırmak için).
+ */
+function toGrid(on: (x: number, y: number) => boolean, w: number, h: number, gwFixed?: number): Grid {
+  const gw = gwFixed ?? Math.max(1, Math.round((w * GH) / h))
   const g = new Uint8Array(gw * GH)
   for (let y = 0; y < GH; y++)
     for (let x = 0; x < gw; x++) {
@@ -437,16 +494,17 @@ function toGrid(on: (x: number, y: number) => boolean, w: number, h: number): Gr
 
 const templates = new Map<string, Grid>()
 
-/** "12." yazısının kalın sans-serif şablonu */
-function template(text: string): Grid {
-  const hit = templates.get(text)
+/** "12." yazısının sans-serif şablonu (kalın ya da normal) */
+function template(text: string, bold = true): Grid {
+  const key = (bold ? 'b' : 'n') + text
+  const hit = templates.get(key)
   if (hit) return hit
   const c = document.createElement('canvas')
   c.width = 220
   c.height = 90
   const ctx = c.getContext('2d', { willReadFrequently: true })!
   ctx.fillStyle = '#000'
-  ctx.font = 'bold 64px Arial, Helvetica, sans-serif'
+  ctx.font = `${bold ? 'bold ' : ''}64px Arial, Helvetica, sans-serif`
   ctx.textBaseline = 'alphabetic'
   ctx.fillText(text, 10, 75)
   const d = ctx.getImageData(0, 0, c.width, c.height).data
@@ -456,8 +514,23 @@ function template(text: string): Grid {
       if (d[(y * c.width + x) * 4 + 3] > 128) (x0 = Math.min(x0, x), x1 = Math.max(x1, x), y0 = Math.min(y0, y), y1 = Math.max(y1, y))
   const w = x1 - x0 + 1, h = y1 - y0 + 1
   const grid = toGrid((x, y) => d[((y0 + y) * c.width + x0 + x) * 4 + 3] > 128, w, h)
-  templates.set(text, grid)
+  templates.set(key, grid)
   return grid
+}
+
+/**
+ * Görüntüdeki yazıyı bir şablonla karşılaştır: görüntü şablonun genişliğine esnetilir (yazı tipi
+ * darlığı önemsizleşir), ama en-boy oranı çok farklıysa (basamak sayısı tutmuyor) puan düşürülür.
+ */
+type Glyph = { on: (x: number, y: number) => boolean; w: number; h: number; cache: Map<number, Grid> }
+const glyph = (on: Glyph['on'], w: number, h: number): Glyph => ({ on, w, h, cache: new Map() })
+function match(g: Glyph, tpl: Grid): number {
+  let fitted = g.cache.get(tpl.w)
+  if (!fitted) g.cache.set(tpl.w, (fitted = toGrid(g.on, g.w, g.h, tpl.w)))
+  // Oran: görüntü genişlik/yükseklik ÷ şablon genişlik/yükseklik — 0,55–1,8 arası yazı tipi farkı sayılır
+  const ratio = g.w / g.h / (tpl.w / GH)
+  const penalty = ratio < 0.55 || ratio > 1.8 ? 0.5 : 1
+  return iou(fitted, tpl) * penalty
 }
 
 /** İki ızgaranın örtüşmesi (sola hizalı; kesişim / birleşim) */
@@ -491,9 +564,9 @@ function readNumbers(canvas: HTMLCanvasElement, boxes: Box[]): void {
   const grids = boxes.map((b) => {
     const x0 = Math.max(0, Math.floor(b.mark!.x0 * W)), y0 = Math.max(0, Math.floor(b.mark!.y0 * H))
     const x1 = Math.min(W, Math.ceil(b.mark!.x1 * W)), y1 = Math.min(H, Math.ceil(b.mark!.y1 * H))
-    return toGrid((x, y) => colored(x0 + x, y0 + y), Math.max(1, x1 - x0), Math.max(1, y1 - y0))
+    return glyph((x, y) => colored(x0 + x, y0 + y), Math.max(1, x1 - x0), Math.max(1, y1 - y0))
   })
-  const score = (g: Grid, n: number): number => Math.max(iou(g, template(`${n}.`)), iou(g, template(String(n))))
+  const score = (g: Glyph, n: number): number => Math.max(match(g, template(`${n}.`)), match(g, template(String(n))))
   let best = { s: 0, v: 0 }
   for (let s = 1; s <= 200; s++) {
     let v = 0

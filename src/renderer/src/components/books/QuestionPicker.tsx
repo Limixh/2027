@@ -6,7 +6,7 @@ import type { Book, ChatAttachment, MistakeNote } from '../../../../shared/types
 import { Button, Field, Input, Modal, Select, cn, toast } from '@/components/ui'
 import { SUBJECT_MAP } from '@/data/curriculum'
 import { addDays, todayKey } from '@/lib/date'
-import { cropImage, detectQuestions, guessIndex, loadPage, openBook, releaseBooksLater, type Box, type PageImage } from '@/lib/pdf'
+import { cropImage, detectQuestions, findInsertedPages, guessIndex, loadPage, openBook, pdfPageFor, releaseBooksLater, type Box, type PageImage } from '@/lib/pdf'
 import { useNav } from '@/lib/nav'
 import { useStore } from '@/lib/store'
 
@@ -18,6 +18,12 @@ export interface PickResult {
 }
 
 type Sel = { kind: 'box'; index: number } | { kind: 'custom'; box: Box } | null
+
+/** Eşleşme tablosu büyümesin (en fazla 300 kayıt) */
+function trimMap(m: Record<string, number>): Record<string, number> {
+  const e = Object.entries(m)
+  return e.length > 300 ? Object.fromEntries(e.slice(e.length - 300)) : m
+}
 
 export function QuestionPicker({
   mode,
@@ -38,7 +44,7 @@ export function QuestionPicker({
   const book = books.find((b) => b.id === bookId)
   const [pageText, setPageText] = useState(() => String(book?.lastPage ?? ''))
   const [qText, setQText] = useState('')
-  const [shown, setShown] = useState<{ bookPage: number; pdfPage: number } | null>(null)
+  const [shown, setShown] = useState<{ bookPage: number; pdfPage: number; skipped: number; manual: boolean } | null>(null)
   const [img, setImg] = useState<PageImage | null>(null)
   const [pageUrl, setPageUrl] = useState('')
   const [boxes, setBoxes] = useState<Box[]>([])
@@ -52,9 +58,13 @@ export function QuestionPicker({
 
   const qNum = Number(qText) || undefined
 
-  /** Kitabın sayfasını aç ve soruları bul */
+  /**
+   * Kitabın sayfasını aç ve soruları bul. PDF sayfası en yakın doğrulanmış eşleşmeden tahmin edilir ve
+   * sayfanın altındaki basılı numara okunarak düzeltilir (araya reklam sayfası eklenmiş PDF'ler).
+   * forcePdf: elle seçilen PDF sayfası (okla kaydırma).
+   */
   const show = useCallback(
-    async (bookPage: number, q?: number, b: Book | undefined = book) => {
+    async (bookPage: number, q?: number, b: Book | undefined = book, forcePdf?: number) => {
       if (!b || !bookPage) return
       const id = ++run.current
       setError('')
@@ -64,14 +74,32 @@ export function QuestionPicker({
         const doc = await openBook(b.rel)
         if (id !== run.current) return
         if (b.pages !== doc.numPages) updateBook(b.id, { pages: doc.numPages })
-        const pdfPage = bookPage + b.pageOffset
-        if (pdfPage < 1 || pdfPage > doc.numPages) throw new Error(`Bu kitapta ${doc.numPages - b.pageOffset} sayfa var`)
+        // İlk açılışta araya eklenmiş (reklam) sayfaları bir kez bul
+        let inserted = b.insertedPages
+        if (!inserted) {
+          setStatus('Kitap ilk kez taranıyor (araya eklenmiş sayfalar aranıyor)…')
+          inserted = await findInsertedPages(doc, (d, t) => id === run.current && setStatus(`Kitap ilk kez taranıyor… ${d}/${t}`))
+          if (inserted.length && (b.pageOffset !== 0 || b.pageMap)) {
+            // Önceki kayma ayarı reklam sayfaları dahil sayılmıştı; artık bunlar atlandığı için sıfırlanır
+            updateBook(b.id, { insertedPages: inserted, pageOffset: 0, pageMap: undefined })
+            b = { ...b, pageOffset: 0, pageMap: undefined }
+            toast(`Bu kitapta araya eklenmiş ${inserted.length} sayfa bulundu; artık otomatik atlanıyor (eski sayfa kayması ayarı sıfırlandı)`, 'info')
+          } else updateBook(b.id, { insertedPages: inserted })
+          if (id !== run.current) return
+        }
+        const pageMap = useStore.getState().data.books?.find((x) => x.id === b!.id)?.pageMap
+        if (forcePdf) {
+          // Elle düzeltme bu kitap sayfası için hatırlanır
+          updateBook(b.id, { pageMap: trimMap({ ...(pageMap ?? {}), [bookPage]: forcePdf }) })
+        }
+        const pdfPage = forcePdf ?? pdfPageFor(bookPage, { offset: b.pageOffset, inserted, pageMap, numPages: doc.numPages })
+        if (pdfPage < 1 || pdfPage > doc.numPages) throw new Error('Bu sayfa kitapta yok')
         setStatus('Sayfa hazırlanıyor…')
         const pi = await loadPage(doc, pdfPage)
         if (id !== run.current) return
         setImg(pi)
         setPageUrl(pi.canvas.toDataURL('image/jpeg', 0.82))
-        setShown({ bookPage, pdfPage })
+        setShown({ bookPage, pdfPage, skipped: inserted.filter((p) => p < pdfPage).length, manual: !!pageMap?.[bookPage] || !!forcePdf })
         setStatus('Sorular aranıyor…')
         const det = await detectQuestions(pi)
         if (id !== run.current) return
@@ -85,7 +113,7 @@ export function QuestionPicker({
           !det.boxes.length
             ? 'Bu sayfada soru otomatik bulunamadı; soruyu fareyle sürükleyerek seç.'
             : q && gi < 0 && nums.length
-              ? `Bu sayfada ${q}. soru yok (bu sayfada ${Math.min(...nums)}–${Math.max(...nums)} var). Sayfayı değiştir ya da bir kutuya tıkla.`
+              ? `${q}. soruyu bu sayfada bulamadım (bulunanlar: ${Math.min(...nums)}–${Math.max(...nums)}). Sayfada varsa fareyle sürükleyerek seç; yoksa sayfayı değiştir.`
               : ''
         )
         updateBook(b.id, { lastPage: bookPage })
@@ -132,12 +160,10 @@ export function QuestionPicker({
   const selNumber = sel?.kind === 'box' ? labels[sel.index] : qNum
   const preview = useMemo(() => (img && selBox ? 'data:image/jpeg;base64,' + cropImage(img, selBox) : ''), [img, selBox])
 
-  // Sayfa kayması: PDF sayfası ≠ kitap sayfası ise okla düzelt (kitap için kalıcı)
+  // Sayfa kayması: yanlış sayfa açıldıysa okla düzelt (bu kitap sayfası için hatırlanır)
   const shiftOffset = (d: number): void => {
     if (!book || !shown) return
-    const nb = { ...book, pageOffset: book.pageOffset + d }
-    updateBook(book.id, { pageOffset: nb.pageOffset })
-    void show(shown.bookPage, qNum, nb)
+    void show(shown.bookPage, qNum, book, shown.pdfPage + d)
   }
 
   /* ---------- sürükleyerek seçme ---------- */
@@ -285,7 +311,9 @@ export function QuestionPicker({
                   <ChevronRight size={15} />
                 </Button>
               </div>
-              <div className="flex items-center gap-1" title="Kitabın üzerindeki sayfa numarası PDF sayfasıyla aynı değilse buradan kaydır; kitap için hatırlanır">
+              <div className="flex items-center gap-1" title="Açılan sayfanın altındaki numara istediğin sayfa değilse buradan kaydır; bu sayfa için hatırlanır">
+                {shown.skipped > 0 && !shown.manual && <span className="text-subtle">araya eklenmiş {shown.skipped} sayfa atlandı ·</span>}
+                {shown.manual && <span className="text-subtle">elle ayarlandı ·</span>}
                 <span>Sayfa kaymış mı?</span>
                 <Button variant="ghost" size="sm" onClick={() => shiftOffset(-1)}>
                   ‹ önceki PDF sayfası

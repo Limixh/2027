@@ -1,8 +1,8 @@
 {
-  "version": "1.9.0",
-  "file": "app-1.9.0.json.gz",
-  "sha256": "b8213adbc4f3f695fa534a47aed74bfbe85e7e6b5f673725f9dee4ef8510a9fa",
+  "version": "1.9.1",
+  "file": "app-1.9.1.json.gz",
+  "sha256": "40a844da8d23bc52b577f5da62e27fa80094821eccb2dd8ebf6ed7e5fec820c7",
   "minShell": "1.1.0",
-  "notes": "Kitaplarım: soru bankası PDF'lerini ekle, sayfa ve soru numarasıyla soruyu otomatik bulup Hata Defteri'ne al",
+  "notes": "PDF'lere sonradan eklenmiş reklam sayfaları otomatik atlanıyor; kitap sayfası doğru açılıyor",
   "date": "2026-10-24"
 }

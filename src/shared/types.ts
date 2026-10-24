@@ -160,8 +160,12 @@ export interface Book {
   size: number
   /** PDF sayfa sayısı (ilk açılışta öğrenilir) */
   pages?: number
-  /** PDF sayfası = kitap sayfası + pageOffset */
+  /** PDF sayfası = kitap sayfası + pageOffset (başlangıç tahmini) */
   pageOffset: number
+  /** Araya eklenmiş (reklam / kanal) PDF sayfaları; ilk açılışta bir kez bulunur, sayfa sayarken atlanır */
+  insertedPages?: number[]
+  /** Elle düzeltilmiş sayfalar: kitap sayfası → PDF sayfası */
+  pageMap?: Record<string, number>
   /** Son kullanılan kitap sayfası (kolaylık) */
   lastPage?: number
   createdAt: string
