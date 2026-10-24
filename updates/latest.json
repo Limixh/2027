@@ -1,8 +1,8 @@
 {
-  "version": "1.3.2",
-  "file": "app-1.3.2.json.gz",
-  "sha256": "894eb4e5b762f4226dae4926732f2b104afb59cfe0f41bfedb793a8bf7e5ff97",
+  "version": "1.4.0",
+  "file": "app-1.4.0.json.gz",
+  "sha256": "852b2b433daa77ea468e35d370c89fa153ee85855a963ab7a9a72049fc165b24",
   "minShell": "1.1.0",
-  "notes": "Hata Defteri: sorulara tarihli yorum ekleme (AI analizi yorumlarını dikkate alır)",
+  "notes": "İkinci Beyin: konular arası bağlantı kuran, kendini güncelleyen beceri hafızası",
   "date": "2026-10-24"
 }

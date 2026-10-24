@@ -14,6 +14,7 @@ YKS 2027'ye hazırlanırken çalışmanı, denemelerini, konu ilerlemeni ve hata
 | **Konu Takibi** | Tüm TYT/AYT konuları; durum (başlanmadı → pekişti), öz güven, aralıklı tekrar hatırlatmaları, konu bazında çözülen soru ve deneme hataları |
 | **Hata Analizi** | Hangi konularda yanlışın var: öncelik puanlı zayıf konu listesi, ders performans tablosu, hata türü dağılımı, otomatik içgörüler |
 | **Soru Pratiği** | "20 paragraf · 28 dk · 17D 2Y 1B" gibi set kaydı; canlı modda her soruda D/Y/B'ye basarak soru başına süre ölçümü; sn/soru, doğruluk ve günlük soru grafikleri |
+| **İkinci Beyin** | Kendini güncelleyen beceri hafızası: AI her yanlış soruyu konudan bağımsız becerilere bağlar (ör. "Denklem sisteminde yok etme yöntemi"); aynı eksik farklı konularda (denklemler, parabol…) çıkınca birleştirir ve analizde "daha önce de burada takılmıştın" der. Liste + Obsidian tarzı harita, mini ders + pratik |
 | **Hata Defteri** | Yanlış yaptığın soruları not al, "doğrusu/çıkardığım ders" yaz, kart modunda tekrar et |
 | **Çalışma Odası** | Sade, tam ekran çalışma sayfası: solda tek araç (saat / geri sayım / kronometre / YKS'ye kalan), sağda günün planı. Görevi "Bitti" deyince çalışma kaydı eklenir ve konu durumu otomatik güncellenir |
 | **AI Koç** | Claude'a bağlan; tüm verilerin otomatik özetlenip gönderilir. Deneme analizi, haftalık program, zayıf konu stratejisi... |
