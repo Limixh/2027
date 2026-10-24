@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Check, Eye, EyeOff, Pencil, RefreshCw, RotateCcw, Sparkles, Trash2, X } from 'lucide-react'
 import type { MistakeKind, MistakeNote } from '../../../../shared/types'
-import { Badge, Button, Modal, Select, cn, toast } from '@/components/ui'
+import { Badge, Button, Modal, Select, Textarea, cn, toast } from '@/components/ui'
 import { SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
 import { MISTAKE_KIND_LABEL } from '@/lib/exam'
 import { formatDate, todayKey } from '@/lib/date'
@@ -53,6 +53,10 @@ export function NoteDetail({
   const note = useStore((s) => s.data.mistakeNotes.find((m) => m.id === id))
   const update = useStore((s) => s.updateMistakeNote)
   const recordRetry = useStore((s) => s.recordRetry)
+  const addComment = useStore((s) => s.addNoteComment)
+  const deleteComment = useStore((s) => s.deleteNoteComment)
+  const [retryComment, setRetryComment] = useState('')
+  const [comment, setComment] = useState('')
 
   const [retry, setRetry] = useState(false)
   const [retried, setRetried] = useState<boolean | null>(null)
@@ -91,7 +95,8 @@ export function NoteDetail({
           note: note.text || undefined,
           correctAnswer: note.correctAnswer,
           myAnswer: note.myAnswer,
-          usedSolution: note.usedSolution || note.kind === 'cozum'
+          usedSolution: note.usedSolution || note.kind === 'cozum',
+          comments: note.comments
         }),
         attachments: imgs.length ? imgs : undefined,
         onText: setLive
@@ -141,6 +146,8 @@ export function NoteDetail({
   }
 
   const answer = (solved: boolean, help = false): void => {
+    if (retryComment.trim()) addComment(id, `[Tekrar: ${solved && !help ? 'çözdüm' : help ? 'çözüme bakarak' : 'çözemedim'}] ${retryComment.trim()}`)
+    setRetryComment('')
     recordRetry(id, solved, help)
     setRetried(solved && !help)
     setRetry(false)
@@ -187,6 +194,12 @@ export function NoteDetail({
             <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{note.text}</p>
           )}
           <p className="text-center text-xs text-subtle">Kendi kâğıdında çöz, sonra dürüstçe işaretle. Analiz ve cevaplar gizli.</p>
+          <Textarea
+            rows={2}
+            value={retryComment}
+            onChange={(e) => setRetryComment(e.target.value)}
+            placeholder="Yorum (isteğe bağlı): bu sefer nerede takıldın / ne fark ettin?"
+          />
         </div>
       </Modal>
     )
@@ -304,6 +317,52 @@ export function NoteDetail({
             </div>
           </Section>
         )}
+
+        <Section title="Yorumlarım">
+          {note.comments?.length ? (
+            <ul className="mb-3 space-y-2">
+              {note.comments.map((c) => (
+                <li key={c.id} className="group flex items-start gap-3 text-sm">
+                  <span className="tabular w-20 shrink-0 pt-0.5 text-xs text-muted">{formatDate(c.date, false)}</span>
+                  <p className="min-w-0 flex-1 whitespace-pre-wrap leading-relaxed">{c.text}</p>
+                  <button
+                    className="shrink-0 text-xs text-subtle opacity-0 transition hover:text-danger group-hover:opacity-100"
+                    onClick={() => deleteComment(id, c.id)}
+                  >
+                    sil
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mb-3 text-xs text-muted">Nerede takıldığını kendi cümlelerinle yaz; AI analizi buna göre yapar.</p>
+          )}
+          <div className="flex items-end gap-2">
+            <Textarea
+              rows={2}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                  addComment(id, comment)
+                  setComment('')
+                }
+              }}
+              placeholder="ör. Kök-katsayıyı doğru yazmıştım ama Δ'yı hesaplarken işaret hatası yaptım"
+              className="min-h-[60px]"
+            />
+            <Button
+              size="sm"
+              disabled={!comment.trim()}
+              onClick={() => {
+                addComment(id, comment)
+                setComment('')
+              }}
+            >
+              Ekle
+            </Button>
+          </div>
+        </Section>
 
         {note.lesson && (
           <Section title="Çıkardığım ders">

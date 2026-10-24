@@ -67,8 +67,12 @@ export function analysisPrompt(p: {
   correctAnswer?: string
   myAnswer?: string
   usedSolution?: boolean
+  comments?: { date: string; text: string }[]
 }): string {
   const facts = [
+    p.comments?.length
+      ? `Öğrencinin bu soru hakkındaki kendi yorumları (nerede takıldığını anlatıyor; analizini özellikle bunlara göre yap ve her birine cevap ver):\n${p.comments.map((c) => `- (${c.date}) ${c.text}`).join('\n')}`
+      : '',
     p.correctAnswer ? `Doğru cevap (cevap anahtarından): ${p.correctAnswer} — çözümün bu cevaba ulaşmalı; ulaşamıyorsan bunu açıkça söyle.` : '',
     p.myAnswer ? `Öğrencinin işaretlediği cevap: ${p.myAnswer}.` : '',
     p.usedSolution

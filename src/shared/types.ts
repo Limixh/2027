@@ -130,6 +130,8 @@ export interface MistakeNote {
   myAnswer?: string
   /** Soruyu çözüme bakarak yaptı */
   usedSolution?: boolean
+  /** Öğrencinin tarihli yorumları: "x'i yapmıştım ama şurada takıldım" */
+  comments?: { id: string; date: string; text: string }[]
 }
 
 /** Soru pratiği seti: ör. 20 paragraf 28 dk, 17D 2Y 1B */

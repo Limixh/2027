@@ -125,6 +125,8 @@ interface Store {
   addMistakeNote(m: NewMistake): MistakeNote
   updateMistakeNote(id: string, patch: Partial<MistakeNote>): void
   deleteMistakeNote(id: string): void
+  addNoteComment(noteId: string, text: string): void
+  deleteNoteComment(noteId: string, commentId: string): void
 
   addGoal(g: NewGoal): Goal
   updateGoal(id: string, patch: Partial<Goal>): void
@@ -249,6 +251,22 @@ export const useStore = create<Store>((set, get) => {
       mutate((d) => ({
         ...d,
         mistakeNotes: d.mistakeNotes.map((m) => (m.id === id ? { ...m, ...patch } : m))
+      }))
+    },
+    addNoteComment(noteId, text) {
+      const t = text.trim()
+      if (!t) return
+      mutate((d) => ({
+        ...d,
+        mistakeNotes: d.mistakeNotes.map((m) =>
+          m.id === noteId ? { ...m, comments: [...(m.comments ?? []), { id: uid(), date: todayKey(), text: t }] } : m
+        )
+      }))
+    },
+    deleteNoteComment(noteId, commentId) {
+      mutate((d) => ({
+        ...d,
+        mistakeNotes: d.mistakeNotes.map((m) => (m.id === noteId ? { ...m, comments: (m.comments ?? []).filter((c) => c.id !== commentId) } : m))
       }))
     },
     deleteMistakeNote(id) {

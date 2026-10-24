@@ -142,6 +142,19 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
                   ))}
                 </div>
               )}
+              {note.comments?.length ? (
+                <div>
+                  <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Yorumlarım</div>
+                  <ul className="space-y-1 text-sm">
+                    {note.comments.map((c) => (
+                      <li key={c.id} className="whitespace-pre-wrap">
+                        <span className="mr-2 text-xs text-muted">{c.date.slice(5).split('-').reverse().join('.')}</span>
+                        {c.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {note.aiAnalysis && (
                 <div className="prose-ai">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.aiAnalysis}</ReactMarkdown>
