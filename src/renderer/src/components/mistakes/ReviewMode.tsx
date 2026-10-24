@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { BookMarked, Eye, PartyPopper, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { Badge, Button, Modal, ProgressBar } from '@/components/ui'
 import { SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
 import { MISTAKE_KIND_COLOR, MISTAKE_KIND_LABEL } from '@/lib/exam'
 import { useStore } from '@/lib/store'
+import { todayKey } from '@/lib/date'
+import { NoteImage } from './NoteImage'
 
 function shuffle<T>(a: T[]): T[] {
   const r = [...a]
@@ -17,8 +21,17 @@ function shuffle<T>(a: T[]): T[] {
 /** Açık hata notlarını tek tek soran flashcard modu */
 export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => void }): React.JSX.Element {
   const notes = useStore((s) => s.data.mistakeNotes)
-  const update = useStore((s) => s.updateMistakeNote)
-  const queue = useMemo(() => shuffle(ids), [ids])
+  const recordRetry = useStore((s) => s.recordRetry)
+  // tekrar zamanı gelenler önce
+  const queue = useMemo(() => {
+    const all = useStore.getState().data.mistakeNotes
+    const t = todayKey()
+    const isDue = (id: string): boolean => {
+      const n = all.find((x) => x.id === id)
+      return !!n?.nextReview && n.nextReview <= t
+    }
+    return [...shuffle(ids.filter(isDue)), ...shuffle(ids.filter((i) => !isDue(i)))]
+  }, [ids])
   const [idx, setIdx] = useState(0)
   const [revealed, setRevealed] = useState(false)
   const [known, setKnown] = useState(0)
@@ -29,10 +42,9 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
 
   const answer = (knows: boolean): void => {
     if (!note) return
-    if (knows) {
-      update(note.id, { resolved: true })
-      setKnown((k) => k + 1)
-    } else setHard((h) => h + 1)
+    recordRetry(note.id, knows)
+    if (knows) setKnown((k) => k + 1)
+    else setHard((h) => h + 1)
     setRevealed(false)
     setIdx((i) => i + 1)
   }
@@ -61,7 +73,7 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
       open
       onClose={onClose}
       title="Tekrar modu"
-      subtitle={finished ? 'Tur tamamlandı' : `${idx + 1} / ${queue.length} · açık hata notların sırayla geliyor`}
+      subtitle={finished ? 'Tur tamamlandı' : `${idx + 1} / ${queue.length} · tekrar zamanı gelenler önce`}
       width={640}
       footer={
         finished ? (
@@ -71,15 +83,15 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
         ) : revealed ? (
           <>
             <Button variant="outline" icon={<ThumbsDown size={14} />} onClick={() => answer(false)}>
-              Hâlâ zorlanıyorum <kbd className="ml-1 rounded bg-surface-3 px-1 text-[10px] text-muted">1</kbd>
+              Çözemedim <kbd className="ml-1 rounded bg-surface-3 px-1 text-[10px] text-muted">1</kbd>
             </Button>
             <Button variant="primary" icon={<ThumbsUp size={14} />} onClick={() => answer(true)}>
-              Artık biliyorum <kbd className="ml-1 rounded bg-white/20 px-1 text-[10px]">2</kbd>
+              Çözdüm <kbd className="ml-1 rounded bg-white/20 px-1 text-[10px]">2</kbd>
             </Button>
           </>
         ) : (
           <Button variant="primary" icon={<Eye size={14} />} onClick={() => setRevealed(true)}>
-            Doğrusunu göster <kbd className="ml-1 rounded bg-white/20 px-1 text-[10px]">Boşluk</kbd>
+            Çözümü göster <kbd className="ml-1 rounded bg-white/20 px-1 text-[10px]">Boşluk</kbd>
           </Button>
         )
       }
@@ -93,32 +105,57 @@ export function ReviewMode({ ids, onClose }: { ids: string[]; onClose: () => voi
           </div>
           <div className="text-base font-semibold">Harika, tur bitti!</div>
           <p className="mt-1 max-w-xs text-sm text-muted">
-            <span className="font-semibold text-success">{known}</span> not çözüldü olarak işaretlendi,{' '}
-            <span className="font-semibold text-warning">{hard}</span> not tekrar için açık kaldı.
+            <span className="font-semibold text-success">{known}</span> not doğru çözüldü,{' '}
+            <span className="font-semibold text-warning">{hard}</span> not yarın yeniden gelecek.
           </p>
         </div>
       ) : note ? (
         <div key={note.id} className="animate-fade-in">
           <div className="mb-3 flex flex-wrap items-center gap-1.5">
-            <Badge color={subject?.color}>{subject?.name}</Badge>
+            <Badge color={subject?.color}>{subject?.name ?? 'Ders seçilmedi'}</Badge>
             <Badge color={MISTAKE_KIND_COLOR[note.kind]}>{MISTAKE_KIND_LABEL[note.kind]}</Badge>
             {topic && <span className="truncate text-xs text-muted">{topic.name}</span>}
             {note.source && <span className="truncate text-xs text-subtle">· {note.source}</span>}
           </div>
-          <div className="rounded-2xl border border-border bg-surface-2 p-5">
-            <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-text">{note.text}</p>
-          </div>
+          {(note.questionImages?.length ?? 0) > 0 && (
+            <div className="mb-3 space-y-3">
+              {note.questionImages!.map((a, i) => (
+                <NoteImage key={a.rel + i} att={a} zoom className="rounded-lg border border-border bg-surface-2" imgClassName="mx-auto max-h-[48vh] w-auto max-w-full" />
+              ))}
+            </div>
+          )}
+          {note.text.trim() && (
+            <div className="rounded-xl border border-border bg-surface-2 p-5">
+              <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-text">{note.text}</p>
+            </div>
+          )}
           {revealed ? (
-            <div className="mt-3 animate-fade-in rounded-2xl border border-success/30 bg-success/5 p-5">
-              <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
-                <BookMarked size={12} /> Doğrusu / çıkardığım ders
-              </div>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-text">
-                {note.lesson || 'Bu not için ders yazılmamış. Düzenleyip eklemeyi unutma.'}
-              </p>
+            <div className="mt-4 animate-fade-in space-y-4 border-t border-border pt-4">
+              {(note.attemptImages?.length ?? 0) > 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  {note.attemptImages!.map((a, i) => (
+                    <NoteImage key={a.rel + i} att={a} zoom className="rounded-lg border border-border bg-surface-2" imgClassName="mx-auto max-h-56 w-auto max-w-full" />
+                  ))}
+                </div>
+              )}
+              {note.aiAnalysis && (
+                <div className="prose-ai">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{note.aiAnalysis}</ReactMarkdown>
+                </div>
+              )}
+              {(note.lesson || !note.aiAnalysis) && (
+                <div>
+                  <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-success">
+                    <BookMarked size={12} /> Doğrusu / çıkardığım ders
+                  </div>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-text">
+                    {note.lesson || 'Bu not için ders yazılmamış. Düzenleyip eklemeyi unutma.'}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
-            <p className="mt-3 text-center text-xs text-subtle">Önce doğrusunu aklından getir, sonra cevabı göster.</p>
+            <p className="mt-3 text-center text-xs text-subtle">Önce kendin çöz, sonra çözümü göster.</p>
           )}
         </div>
       ) : null}

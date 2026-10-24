@@ -1,22 +1,23 @@
 import { useCallback, useMemo, useState } from 'react'
-import { AlertTriangle, CalendarPlus, ClipboardList, Layers, Plus, Play, Search, Target, X } from 'lucide-react'
+import { ClipboardList, Plus, Play, Search, Smartphone, X } from 'lucide-react'
 import type { MistakeNote } from '../../../shared/types'
-import { Button, Card, EmptyState, Input, PageHeader, Segmented, Select, StatCard, cn, confirm, toast } from '@/components/ui'
+import { Button, Card, EmptyState, Input, PageHeader, Segmented, Select, cn, confirm, toast } from '@/components/ui'
 import { SUBJECTS, SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
 import { MISTAKE_KIND_COLOR, MISTAKE_KIND_LABEL } from '@/lib/exam'
-import { startOfWeek, todayKey } from '@/lib/date'
+import { todayKey } from '@/lib/date'
 import { useNav } from '@/lib/nav'
 import { useStore } from '@/lib/store'
 import { fold } from '@/components/topics/meta'
 import { KINDS, MistakeModal, type MistakeDraft } from '@/components/mistakes/MistakeModal'
 import { MistakeCard } from '@/components/mistakes/MistakeCard'
 import { ReviewMode } from '@/components/mistakes/ReviewMode'
+import { NoteDetail } from '@/components/mistakes/NoteDetail'
+import { PhoneUploadModal } from '@/components/phone/PhoneUpload'
 
-type StatusFilter = 'all' | 'open' | 'done'
+type StatusFilter = 'all' | 'open' | 'due' | 'done'
 
 export default function Mistakes(): React.JSX.Element {
   const notes = useStore((s) => s.data.mistakeNotes)
-  const update = useStore((s) => s.updateMistakeNote)
   const remove = useStore((s) => s.deleteMistakeNote)
 
   const params = useNav.getState().params
@@ -35,22 +36,14 @@ export default function Mistakes(): React.JSX.Element {
   const [kindFilter, setKindFilter] = useState('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [search, setSearch] = useState('')
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [phone, setPhone] = useState(false)
 
   const openNotes = useMemo(() => notes.filter((n) => !n.resolved), [notes])
 
-  const stats = useMemo(() => {
-    const weekStart = startOfWeek(todayKey())
-    const thisWeek = notes.filter((n) => n.date >= weekStart).length
-    const bySubject = new Map<string, number>()
-    const byTopic = new Map<string, number>()
-    for (const n of notes) {
-      bySubject.set(n.subjectId, (bySubject.get(n.subjectId) ?? 0) + 1)
-      if (n.topicId) byTopic.set(n.topicId, (byTopic.get(n.topicId) ?? 0) + 1)
-    }
-    const top = (m: Map<string, number>): [string, number] | undefined =>
-      [...m.entries()].sort((a, b) => b[1] - a[1])[0]
-    return { thisWeek, topSubject: top(bySubject), topTopic: top(byTopic) }
-  }, [notes])
+  const today = todayKey()
+  const dueNotes = useMemo(() => notes.filter((n) => !n.resolved && !!n.nextReview && n.nextReview <= today), [notes, today])
+  const inboxCount = useMemo(() => notes.filter((n) => n.inbox).length, [notes])
 
   const subjectsWithNotes = useMemo(() => {
     const ids = new Set(notes.map((n) => n.subjectId))
@@ -64,6 +57,7 @@ export default function Mistakes(): React.JSX.Element {
         if (subjectFilter !== 'all' && n.subjectId !== subjectFilter) return false
         if (kindFilter !== 'all' && n.kind !== kindFilter) return false
         if (status === 'open' && n.resolved) return false
+        if (status === 'due' && !(!n.resolved && n.nextReview && n.nextReview <= today)) return false
         if (status === 'done' && !n.resolved) return false
         if (q) {
           const hay = fold(
@@ -76,22 +70,17 @@ export default function Mistakes(): React.JSX.Element {
         return true
       })
       .sort((a, b) => Number(a.resolved) - Number(b.resolved) || b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-  }, [notes, subjectFilter, kindFilter, status, search])
+  }, [notes, subjectFilter, kindFilter, status, search, today])
 
   const filtering = subjectFilter !== 'all' || kindFilter !== 'all' || status !== 'all' || search.trim() !== ''
 
-  const onToggle = useCallback(
-    (n: MistakeNote) => {
-      update(n.id, { resolved: !n.resolved })
-      toast(n.resolved ? 'Not yeniden açıldı' : 'Çözüldü olarak işaretlendi', 'info')
-    },
-    [update]
-  )
+  const onOpen = useCallback((n: MistakeNote) => setDetailId(n.id), [])
   const onEdit = useCallback((n: MistakeNote) => setModal({ note: n }), [])
   const onDelete = useCallback(
     async (n: MistakeNote) => {
       if (await confirm({ title: 'Bu not silinsin mi?', message: 'Hata defterinden kalıcı olarak silinecek.' })) {
         remove(n.id)
+        setDetailId((d) => (d === n.id ? null : d))
         toast('Not silindi', 'info')
       }
     },
@@ -100,30 +89,30 @@ export default function Mistakes(): React.JSX.Element {
 
   const newBtn = (
     <Button variant="primary" icon={<Plus size={15} />} onClick={() => setModal({})}>
-      Yeni hata notu
+      Not ekle
     </Button>
   )
-
-  const topSubject = stats.topSubject ? SUBJECT_MAP[stats.topSubject[0]] : undefined
-  const topTopic = stats.topTopic ? TOPIC_MAP[stats.topTopic[0]] : undefined
 
   return (
     <div>
       <PageHeader
         title="Hata Defteri"
-        description="Yanlış yaptığın soruları ve çıkardığın dersleri biriktir, sınavdan önce tekrar et."
+        description="Yanlış yaptığın soruları ekle, AI ile analiz et, farklı günlerde tekrar çöz."
         actions={
           <>
+            <Button variant="outline" icon={<Smartphone size={14} />} onClick={() => setPhone(true)}>
+              Telefondan yükle
+            </Button>
             <Button
               variant="outline"
               icon={<Play size={14} />}
               disabled={openNotes.length === 0}
-              onClick={() => setReviewIds(openNotes.map((n) => n.id))}
+              onClick={() => setReviewIds((dueNotes.length ? dueNotes : openNotes).map((n) => n.id))}
             >
               Tekrar modu
               {openNotes.length > 0 && (
                 <span className="tabular rounded bg-accent/15 px-1.5 text-[11px] font-semibold text-accent">
-                  {openNotes.length}
+                  {dueNotes.length || openNotes.length}
                 </span>
               )}
             </Button>
@@ -138,51 +127,38 @@ export default function Mistakes(): React.JSX.Element {
             className="py-20"
             icon={<ClipboardList size={22} />}
             title="Hata defterin henüz boş"
-            description="Denemede ya da soru çözerken yanlış yaptığın soruları buraya not al. Doğrusunu yazdığın notları daha sonra flashcard gibi tekrar edebilirsin."
+            description="Yanlış yaptığın sorunun fotoğrafını ekle; konuyu seç, AI nerede takıldığını göstersin ve benzer sorularla pekiştirsin."
             action={newBtn}
           />
         </Card>
       ) : (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-4 xl:grid-cols-4">
-            <StatCard label="Toplam not" value={notes.length} icon={<Layers size={14} />} sub={`${notes.length - openNotes.length} tanesi çözüldü`} />
-            <StatCard
-              label="Açık hata"
-              value={openNotes.length}
-              icon={<AlertTriangle size={14} />}
-              accent="rgb(var(--warning))"
-              sub={notes.length ? `%${Math.round((openNotes.length / notes.length) * 100)} hâlâ açık` : undefined}
-            />
-            <StatCard
-              label="Bu hafta eklenen"
-              value={stats.thisWeek}
-              icon={<CalendarPlus size={14} />}
-              accent="rgb(var(--info))"
-              sub="Pazartesiden itibaren"
-            />
-            <StatCard
-              label="En çok hata"
-              value={<span className="block truncate text-lg leading-8">{topSubject?.name ?? '—'}</span>}
-              icon={<Target size={14} />}
-              accent={topSubject?.color ?? 'rgb(var(--danger))'}
-              sub={
-                <span className="block truncate">
-                  {stats.topSubject && `${stats.topSubject[1]} not`}
-                  {topTopic && stats.topTopic && ` · ${topTopic.name} (${stats.topTopic[1]})`}
-                </span>
-              }
-            />
-          </div>
+          <p className="mb-5 text-sm text-muted">
+            <span className="tabular text-text">{notes.length}</span> not ·{' '}
+            <span className="tabular text-text">{openNotes.length}</span> açık ·{' '}
+            <span className={cn('tabular', dueNotes.length ? 'text-warning' : 'text-text')}>{dueNotes.length}</span> bugün tekrar
+            {inboxCount > 0 && (
+              <>
+                {' '}
+                · <span className="tabular text-info">{inboxCount}</span> telefondan geldi
+              </>
+            )}
+          </p>
 
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            <div className="relative w-64">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Segmented<StatusFilter>
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: 'all', label: 'Tümü' },
+                { value: 'open', label: 'Açık' },
+                { value: 'due', label: `Bugün tekrar${dueNotes.length ? ` (${dueNotes.length})` : ''}` },
+                { value: 'done', label: 'Öğrenildi' }
+              ]}
+            />
+            <div className="relative ml-auto w-56">
               <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-subtle" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Notlarda ara…"
-                className="pl-8 pr-8"
-              />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Ara…" className="pl-8 pr-8" />
               {search && (
                 <button
                   type="button"
@@ -194,7 +170,7 @@ export default function Mistakes(): React.JSX.Element {
                 </button>
               )}
             </div>
-            <Select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} className="!w-48" aria-label="Ders">
+            <Select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} className="!w-44" aria-label="Ders">
               <option value="all">Tüm dersler</option>
               {subjectsWithNotes.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -202,15 +178,6 @@ export default function Mistakes(): React.JSX.Element {
                 </option>
               ))}
             </Select>
-                        <Segmented<StatusFilter>
-              value={status}
-              onChange={setStatus}
-              options={[
-                { value: 'all', label: 'Tümü' },
-                { value: 'open', label: 'Açık' },
-                { value: 'done', label: 'Çözüldü' }
-              ]}
-            />
             {filtering && (
               <Button
                 variant="ghost"
@@ -226,11 +193,9 @@ export default function Mistakes(): React.JSX.Element {
                 Temizle
               </Button>
             )}
-            <span className="tabular ml-auto text-xs text-muted">{filtered.length} not</span>
           </div>
 
-          {/* tür dağılımı */}
-          <div className="mb-4 flex flex-wrap items-center gap-1.5">
+          <div className="mb-5 flex flex-wrap items-center gap-1.5">
             {KINDS.map((k) => {
               const c = MISTAKE_KIND_COLOR[k]
               const count = notes.filter((n) => n.kind === k).length
@@ -252,28 +217,33 @@ export default function Mistakes(): React.JSX.Element {
                 </button>
               )
             })}
+            <span className="tabular ml-auto text-xs text-muted">{filtered.length} not</span>
           </div>
 
           {filtered.length === 0 ? (
             <Card>
               <EmptyState
                 icon={<Search size={20} />}
-                title="Bu süzgece uyan not yok"
-                description="Arama ya da süzgeçleri değiştirmeyi dene."
+                title={status === 'due' ? 'Bugün tekrar edilecek not yok' : 'Bu süzgece uyan not yok'}
+                description={status === 'due' ? 'Yeni eklenen sorular ertesi gün tekrar listene düşer.' : 'Arama ya da süzgeçleri değiştirmeyi dene.'}
               />
             </Card>
           ) : (
             <div className="columns-1 gap-4 lg:columns-2 2xl:columns-3">
               {filtered.map((n) => (
-                <MistakeCard key={n.id} note={n} onToggle={onToggle} onEdit={onEdit} onDelete={(x) => void onDelete(x)} />
+                <MistakeCard key={n.id} note={n} onOpen={onOpen} onEdit={onEdit} onDelete={(x) => void onDelete(x)} />
               ))}
             </div>
           )}
         </>
       )}
 
+      {detailId && !modal && !reviewIds && (
+        <NoteDetail id={detailId} onClose={() => setDetailId(null)} onEdit={onEdit} onDelete={(x) => void onDelete(x)} />
+      )}
       {modal && <MistakeModal note={modal.note} draft={modal.draft} onClose={() => setModal(null)} />}
       {reviewIds && <ReviewMode ids={reviewIds} onClose={() => setReviewIds(null)} />}
+      <PhoneUploadModal open={phone} onClose={() => setPhone(false)} />
     </div>
   )
 }

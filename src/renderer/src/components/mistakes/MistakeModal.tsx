@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Check, Trash2 } from 'lucide-react'
-import type { MistakeKind, MistakeNote } from '../../../../shared/types'
+import type { ChatAttachment, MistakeKind, MistakeNote } from '../../../../shared/types'
 import { Button, Field, Input, Modal, Select, Textarea, cn, confirm, toast } from '@/components/ui'
 import { SUBJECTS, SUBJECT_MAP } from '@/data/curriculum'
 import { MISTAKE_KIND_COLOR, MISTAKE_KIND_LABEL } from '@/lib/exam'
-import { todayKey } from '@/lib/date'
+import { addDays, todayKey } from '@/lib/date'
 import { useStore } from '@/lib/store'
+import { ImagePicker } from './ImagePicker'
 
 export const KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos']
 
@@ -30,7 +31,7 @@ export function MistakeModal({
   const lastField = useStore((s) => s.data.settings.field)
 
   const defaultSubject =
-    note?.subjectId ??
+    (note ? note.subjectId : undefined) ??
     draft?.subjectId ??
     SUBJECTS.find((s) => s.exam === 'TYT' && s.id === 'tyt-matematik')?.id ??
     SUBJECTS[0].id
@@ -44,6 +45,10 @@ export function MistakeModal({
   const [date, setDate] = useState(note?.date ?? todayKey())
   const [resolved, setResolved] = useState(note?.resolved ?? false)
   const [tried, setTried] = useState(false)
+  const [qImgs, setQImgs] = useState<ChatAttachment[]>(note?.questionImages ?? [])
+  const [aImgs, setAImgs] = useState<ChatAttachment[]>(note?.attemptImages ?? [])
+  const [pasteTo, setPasteTo] = useState<'q' | 'a'>('q')
+  const hasImg = qImgs.length > 0 || aImgs.length > 0
 
   const subject = SUBJECT_MAP[subjectId]
   const tyt = SUBJECTS.filter((s) => s.exam === 'TYT')
@@ -65,7 +70,7 @@ export function MistakeModal({
 
   const save = (): void => {
     setTried(true)
-    if (!text.trim()) return
+    if (!text.trim() && !hasImg) return
     const payload = {
       subjectId,
       topicId: topicId || undefined,
@@ -74,13 +79,16 @@ export function MistakeModal({
       lesson: lesson.trim() || undefined,
       kind,
       date,
-      resolved
+      resolved,
+      questionImages: qImgs.length ? qImgs : undefined,
+      attemptImages: aImgs.length ? aImgs : undefined
     }
     if (note) {
-      update(note.id, payload)
+      update(note.id, { ...payload, inbox: false })
       toast('Not güncellendi')
     } else {
-      add(payload)
+      // Görselli yeni not, çözülmediyse yarın tekrar döngüsüne girer
+      add({ ...payload, nextReview: hasImg && !resolved ? addDays(todayKey(), 1) : undefined })
       toast('Hata defterine eklendi')
     }
     onClose()
@@ -100,8 +108,8 @@ export function MistakeModal({
       open
       onClose={onClose}
       title={note ? 'Hata notunu düzenle' : 'Yeni hata notu'}
-      subtitle="Yanlış yaptığın soruyu ve ondan çıkardığın dersi kaydet."
-      width={640}
+      subtitle="Soruyu görsel ya da metin olarak kaydet; AI analizi sonradan da yapılabilir."
+      width={680}
       footer={
         <>
           {note && (
@@ -119,6 +127,23 @@ export function MistakeModal({
       }
     >
       <div className="space-y-4">
+        <ImagePicker
+          label="Soru görseli"
+          hint="Birden fazla görsel ekleyebilirsin."
+          value={qImgs}
+          onChange={setQImgs}
+          pasteActive={pasteTo === 'q'}
+          onActivate={() => setPasteTo('q')}
+        />
+        <ImagePicker
+          label="Benim çözümüm (işlemli hali, isteğe bağlı)"
+          hint="Çözemediğin sorudaki karalamanı silmeden ekle; AI hatanı satır satır bulur."
+          value={aImgs}
+          onChange={setAImgs}
+          pasteActive={pasteTo === 'a'}
+          onActivate={() => setPasteTo('a')}
+        />
+
         <div className="grid grid-cols-2 gap-3">
           <Field label="Ders">
             <Select
@@ -128,6 +153,7 @@ export function MistakeModal({
                 setTopicId('')
               }}
             >
+              {subjectId === '' && <option value="">— Ders seç —</option>}
               <optgroup label="TYT">
                 {tyt.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -202,16 +228,16 @@ export function MistakeModal({
           </div>
         </div>
 
-        <Field label="Soru / hata açıklaması" hint={tried && !text.trim() ? undefined : 'Soruyu veya neyi yanlış yaptığını kısaca yaz.'}>
+        <Field label={hasImg ? 'Not (isteğe bağlı)' : 'Soru / hata açıklaması'} hint={tried && !text.trim() && !hasImg ? undefined : 'Soruyu veya neyi yanlış yaptığını kısaca yaz.'}>
           <Textarea
-            autoFocus={!note}
+            autoFocus={!note && !hasImg}
             rows={4}
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="ör. Türev uygulamasında kritik noktayı bulurken ikinci türev işaretini ters yorumladım…"
-            className={cn(tried && !text.trim() && 'border-danger focus:border-danger focus:ring-danger/25')}
+            className={cn(tried && !text.trim() && !hasImg && 'border-danger focus:border-danger focus:ring-danger/25')}
           />
-          {tried && !text.trim() && <span className="mt-1 block text-[11px] text-danger">Açıklama boş bırakılamaz.</span>}
+          {tried && !text.trim() && !hasImg && <span className="mt-1 block text-[11px] text-danger">Açıklama yaz ya da bir görsel ekle.</span>}
         </Field>
 
         <Field label="Doğrusu / çıkardığım ders">
