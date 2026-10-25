@@ -130,8 +130,8 @@ export interface MistakeNote {
   nextReview?: string
   /** Telefondan yüklendiyse true (henüz incelenmedi) */
   inbox?: boolean
-  /** Kitaptan alındıysa: hangi kitap, sayfa ve soru */
-  bookRef?: { bookId: string; page: number; question?: number }
+  /** Hangi kitaptan: kitap, sayfa ve soru (sayfa / soru isteğe bağlı) */
+  bookRef?: { bookId: string; page?: number; question?: number }
   /** Doğru cevap (ör. 'C' ya da sayısal cevap) */
   correctAnswer?: string
   /** Öğrencinin işaretlediği cevap */
@@ -148,16 +148,16 @@ export interface MistakeNote {
   skillIds?: string[]
 }
 
-/** Kitaplıktaki soru bankası PDF'i */
+/** Kitaplıktaki soru bankası: PDF'li ya da yalnızca basılı (bilgi olarak) */
 export interface Book {
   id: string
   title: string
   publisher?: string
   subjectId?: string
-  /** userData'ya göre göreli yol (attachments/books/x.pdf) */
-  rel: string
-  fileName: string
-  size: number
+  /** PDF'i varsa: userData'ya göre göreli yol (attachments/books/x.pdf); basılı kitapta yok */
+  rel?: string
+  fileName?: string
+  size?: number
   /** PDF sayfa sayısı (ilk açılışta öğrenilir) */
   pages?: number
   /** PDF sayfası = kitap sayfası + pageOffset (başlangıç tahmini) */
@@ -495,6 +495,8 @@ export interface PhoneUpload {
   attemptImages: ChatAttachment[]
   /** Toplu modda gönderildi (bilgiler bilgisayarda Toplu giriş ekranında girilir) */
   bulk?: boolean
+  /** Telefonda seçilen kitap */
+  bookRef?: { bookId: string; page?: number; question?: number }
 }
 
 export interface PhoneServerInfo {

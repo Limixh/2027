@@ -4,10 +4,15 @@ import QRCode from 'qrcode'
 import { useEffect, useState } from 'react'
 import type { PhoneServerInfo } from '../../../../shared/types'
 import { SUBJECTS } from '@/data/curriculum'
+import { useStore } from '@/lib/store'
 import { Button, Modal } from '../ui'
 
+/** Telefona gönderilen liste: dersler + konular ve kitaplar */
 const catalogJson = (): string =>
-  JSON.stringify(SUBJECTS.map((s) => ({ id: s.id, name: s.name, exam: s.exam, topics: s.topics.map((t) => ({ id: t.id, name: t.name, group: t.group })) })))
+  JSON.stringify({
+    subjects: SUBJECTS.map((s) => ({ id: s.id, name: s.name, exam: s.exam, topics: s.topics.map((t) => ({ id: t.id, name: t.name, group: t.group })) })),
+    books: (useStore.getState().data.books ?? []).map((b) => ({ id: b.id, title: b.title, subjectId: b.subjectId }))
+  })
 
 export function PhoneUploadModal({ open, onClose }: { open: boolean; onClose: () => void }): React.JSX.Element | null {
   const [info, setInfo] = useState<PhoneServerInfo | null>(null)

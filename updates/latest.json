@@ -1,8 +1,8 @@
 {
-  "version": "1.9.1",
-  "file": "app-1.9.1.json.gz",
-  "sha256": "40a844da8d23bc52b577f5da62e27fa80094821eccb2dd8ebf6ed7e5fec820c7",
+  "version": "1.10.0",
+  "file": "app-1.10.0.json.gz",
+  "sha256": "ab3b6ddbdf32eb0e2e95aa7a1bb741461b5d7a4098e3db840796f75c58977fa5",
   "minShell": "1.1.0",
-  "notes": "PDF'lere sonradan eklenmiş reklam sayfaları otomatik atlanıyor; kitap sayfası doğru açılıyor",
-  "date": "2026-10-24"
+  "notes": "Kitaplar: PDF isteğe bağlı; soru eklerken (telefon dahil) kitap, sayfa ve soru no seçilir; kitap istatistikleri ve Hata Defteri'nde kitap filtresi",
+  "date": "2026-10-25"
 }

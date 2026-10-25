@@ -9,11 +9,15 @@ import { useStore } from '@/lib/store'
 import { AnswerInput, HELP_OPTIONS, KINDS, SubjectTopicFields } from './MistakeModal'
 import { ImagePicker } from './ImagePicker'
 import { NoteImage } from './NoteImage'
+import { BookFields } from '@/components/books/BookFields'
+import { bookSource } from '@/lib/bookStats'
 
 /** Bir sorudan diğerine taşınan alanlar (aynı denemeden gelen sorular genelde aynı ders/kaynak) */
 interface Sticky {
   subjectId: string
   source: string
+  /** Aynı kitap ve sayfadan gelen sorular arka arkaya girilir */
+  bookRef?: NonNullable<MistakeNote['bookRef']>
 }
 
 export function InboxWizard({ onClose }: { onClose: () => void }): React.JSX.Element | null {
@@ -86,15 +90,18 @@ function InboxForm({
   const [kind, setKind] = useState<MistakeKind>(note.kind)
   const [text, setText] = useState(note.text)
   const [aImgs, setAImgs] = useState<ChatAttachment[]>(note.attemptImages ?? [])
+  const [bookRef, setBookRef] = useState(note.bookRef ?? (sticky.bookRef ? { bookId: sticky.bookRef.bookId, page: sticky.bookRef.page } : undefined))
   const [tried, setTried] = useState(false)
 
   const save = (): void => {
     setTried(true)
     if (!subjectId) return
+    const book = bookRef ? useStore.getState().data.books?.find((b) => b.id === bookRef.bookId) : undefined
     update(note.id, {
       subjectId,
       topicId: topicId || undefined,
-      source: source.trim() || undefined,
+      source: source.trim() || (book ? bookSource(book.title, bookRef?.page, bookRef?.question) : undefined),
+      bookRef,
       correctAnswer: correctAnswer.trim() || undefined,
       myAnswer: myAnswer.trim() || undefined,
       usedSolution: help === 'sol' || undefined,
@@ -105,7 +112,8 @@ function InboxForm({
       attemptImages: aImgs.length ? aImgs : undefined,
       inbox: false
     })
-    onSticky({ subjectId, source: source.trim() })
+    // Kitap seçiliyse kaynak her soru için kitaptan yazılır; elle yazılan kaynak sonraki soruya taşınır
+    onSticky({ subjectId, source: bookRef ? '' : source.trim(), bookRef })
     onNext(true)
   }
   const saveRef = useRef(save)
@@ -177,8 +185,17 @@ function InboxForm({
           />
           {tried && !subjectId && <p className="-mt-2 text-[11px] text-danger">Kaydetmek için ders seç.</p>}
 
+          <BookFields
+            value={bookRef}
+            onChange={setBookRef}
+            subjectId={subjectId}
+            onPickBook={(b) => {
+              if (b.subjectId && !subjectId) setSubjectId(b.subjectId)
+            }}
+          />
+
           <Field label="Kaynak">
-            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="ör. 3D TYT Deneme 4, Soru 23" />
+            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder={bookRef ? 'Boş bırakırsan kitaptan yazılır' : 'ör. 3D TYT Deneme 4, Soru 23'} />
           </Field>
 
           <Field label="Doğru cevap">

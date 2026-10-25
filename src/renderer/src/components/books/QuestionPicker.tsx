@@ -35,7 +35,9 @@ export function QuestionPicker({
   onClose: () => void
   onPick?: (r: PickResult) => void
 }): React.JSX.Element {
-  const books = useStore((s) => s.data.books ?? [])
+  // Yalnızca PDF'i olan kitaplardan soru alınır
+  const allBooks = useStore((s) => s.data.books)
+  const books = useMemo(() => (allBooks ?? []).filter((b) => b.rel), [allBooks])
   const updateBook = useStore((s) => s.updateBook)
   const [bookId, setBookId] = useState(() => {
     const last = localStorage.getItem('yks-last-book')
@@ -71,7 +73,7 @@ export function QuestionPicker({
       setSel(null)
       try {
         setStatus('Kitap açılıyor… (ilk açılış birkaç saniye sürebilir)')
-        const doc = await openBook(b.rel)
+        const doc = await openBook(b.rel!)
         if (id !== run.current) return
         if (b.pages !== doc.numPages) updateBook(b.id, { pages: doc.numPages })
         // İlk açılışta araya eklenmiş (reklam) sayfaları bir kez bul
@@ -213,7 +215,7 @@ export function QuestionPicker({
   if (!books.length)
     return (
       <Modal open onClose={onClose} title="Kitaptan soru al" width={480}>
-        <p className="text-sm text-muted">Henüz kitap eklemedin. Soru bankası PDF’lerini Kitaplarım’a ekle; sonra sayfa ve soru numarasıyla soruyu buradan alırsın.</p>
+        <p className="text-sm text-muted">Henüz PDF’li kitap eklemedin. Soru bankası PDF’lerini Kitaplarım’a ekle; sonra sayfa ve soru numarasıyla soruyu buradan alırsın.</p>
         <div className="mt-5 flex justify-end">
           <Button
             variant="primary"

@@ -36,6 +36,12 @@ export default function Mistakes(): React.JSX.Element {
   )
   const [reviewIds, setReviewIds] = useState<string[] | null>(null)
   const [subjectFilter, setSubjectFilter] = useState('all')
+  const [bookFilter, setBookFilter] = useState(typeof params.book === 'string' ? params.book : 'all')
+  const books = useStore((s) => s.data.books)
+  const booksWithNotes = useMemo(() => {
+    const ids = new Set(notes.map((n) => n.bookRef?.bookId).filter(Boolean))
+    return (books ?? []).filter((b) => ids.has(b.id))
+  }, [books, notes])
   const [kindFilter, setKindFilter] = useState('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [search, setSearch] = useState('')
@@ -43,7 +49,7 @@ export default function Mistakes(): React.JSX.Element {
   const [phone, setPhone] = useState(false)
   const [wizard, setWizard] = useState(false)
   const [bookPicker, setBookPicker] = useState(false)
-  const hasBooks = useStore((s) => (s.data.books?.length ?? 0) > 0)
+  const hasBooks = useStore((s) => !!s.data.books?.some((b) => b.rel))
   const closeWizard = useCallback(() => setWizard(false), [])
 
   const openNotes = useMemo(() => notes.filter((n) => !n.resolved), [notes])
@@ -62,6 +68,7 @@ export default function Mistakes(): React.JSX.Element {
     return notes
       .filter((n) => {
         if (subjectFilter !== 'all' && n.subjectId !== subjectFilter) return false
+        if (bookFilter !== 'all' && n.bookRef?.bookId !== bookFilter) return false
         if (kindFilter !== 'all' && n.kind !== kindFilter) return false
         if (status === 'open' && n.resolved) return false
         if (status === 'due' && !(!n.resolved && n.nextReview && n.nextReview <= today)) return false
@@ -77,9 +84,9 @@ export default function Mistakes(): React.JSX.Element {
         return true
       })
       .sort((a, b) => Number(a.resolved) - Number(b.resolved) || b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
-  }, [notes, subjectFilter, kindFilter, status, search, today])
+  }, [notes, subjectFilter, bookFilter, kindFilter, status, search, today])
 
-  const filtering = subjectFilter !== 'all' || kindFilter !== 'all' || status !== 'all' || search.trim() !== ''
+  const filtering = subjectFilter !== 'all' || bookFilter !== 'all' || kindFilter !== 'all' || status !== 'all' || search.trim() !== ''
 
   // Listeye dönünce kaldığı yere kaydır
   const listScroll = useRef(0)
@@ -240,6 +247,16 @@ export default function Mistakes(): React.JSX.Element {
                 </option>
               ))}
             </Select>
+            {booksWithNotes.length > 0 && (
+              <Select value={bookFilter} onChange={(e) => setBookFilter(e.target.value)} className="!w-48" aria-label="Kitap">
+                <option value="all">Tüm kitaplar</option>
+                {booksWithNotes.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.title}
+                  </option>
+                ))}
+              </Select>
+            )}
             {filtering && (
               <Button
                 variant="ghost"
@@ -248,6 +265,7 @@ export default function Mistakes(): React.JSX.Element {
                 onClick={() => {
                   setSearch('')
                   setSubjectFilter('all')
+                  setBookFilter('all')
                   setKindFilter('all')
                   setStatus('all')
                 }}

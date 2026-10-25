@@ -76,6 +76,13 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         usedHint?: boolean
         hintSeen?: string
         bulk?: boolean
+        bookId?: string
+        bookPage?: string
+        bookQuestion?: string
+      }
+      const num = (v?: string): number | undefined => {
+        const n = Number(String(v ?? '').replace(/\D/g, ''))
+        return n > 0 && n < 10000 ? n : undefined
       }
       const save = (list: string[] | undefined, prefix: string): ChatAttachment[] =>
         (list ?? []).slice(0, 6).map((b64, i) => saveAttachment(`${prefix}-${Date.now()}-${i + 1}.jpg`, b64.replace(/^data:[^,]+,/, '')))
@@ -93,7 +100,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         hintSeen: (body.hintSeen ?? '').slice(0, 1000) || undefined,
         questionImages: question,
         attemptImages: save(body.attempt, 'cozum'),
-        bulk: body.bulk === true || undefined
+        bulk: body.bulk === true || undefined,
+        bookRef: body.bookId ? { bookId: String(body.bookId).slice(0, 64), page: num(body.bookPage), question: num(body.bookQuestion) } : undefined
       }
       received++
       if (target && !target.isDestroyed()) target.send('phone:upload', upload)

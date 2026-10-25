@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { BookOpen, Check, Trash2 } from 'lucide-react'
 import { QuestionPicker } from '@/components/books/QuestionPicker'
+import { BookFields } from '@/components/books/BookFields'
+import { bookSource } from '@/lib/bookStats'
 import type { ChatAttachment, MistakeKind, MistakeNote } from '../../../../shared/types'
 import { Button, Field, Input, Modal, Select, Textarea, cn, confirm, toast } from '@/components/ui'
 import { SUBJECTS, SUBJECT_MAP } from '@/data/curriculum'
@@ -65,10 +67,12 @@ export function MistakeModal({
   const save = (): void => {
     setTried(true)
     if (!text.trim() && !hasImg) return
+    // Kitap seçilip kaynak boş bırakıldıysa kaynak kitaptan yazılır
+    const book = bookRef ? useStore.getState().data.books?.find((b) => b.id === bookRef.bookId) : undefined
     const payload = {
       subjectId,
       topicId: topicId || undefined,
-      source: source.trim() || undefined,
+      source: source.trim() || (book ? bookSource(book.title, bookRef?.page, bookRef?.question) : undefined),
       text: text.trim(),
       lesson: lesson.trim() || undefined,
       kind,
@@ -174,9 +178,18 @@ export function MistakeModal({
           onTopic={setTopicId}
         />
 
+        <BookFields
+          value={bookRef}
+          onChange={setBookRef}
+          subjectId={subjectId}
+          onPickBook={(b) => {
+            if (b.subjectId && b.subjectId !== subjectId && !topicId) setSubjectId(b.subjectId)
+          }}
+        />
+
         <div className="grid grid-cols-[1fr_170px] gap-3">
           <Field label="Kaynak (kitap / deneme adı)">
-            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder="ör. 3D TYT Deneme 4, Soru 23" />
+            <Input value={source} onChange={(e) => setSource(e.target.value)} placeholder={bookRef ? 'Boş bırakırsan kitaptan yazılır' : 'ör. 3D TYT Deneme 4, Soru 23'} />
           </Field>
           <Field label="Tarih">
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />

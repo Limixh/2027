@@ -5,6 +5,7 @@ import { ConfirmHost, toast, ToastHost } from './components/ui'
 import { addDays, todayKey } from './lib/date'
 import { useNav } from './lib/nav'
 import { useStore } from './lib/store'
+import { bookSource } from './lib/bookStats'
 import Dashboard from './pages/Dashboard'
 import Study from './pages/Study'
 import Exams from './pages/Exams'
@@ -74,14 +75,17 @@ export default function App(): React.JSX.Element {
     let bulkTimer: ReturnType<typeof setTimeout> | undefined
     const off = window.api.phone.onUpload((u) => {
       const st = useStore.getState()
+      // Telefonda kitap seçildiyse: ders boşsa kitabın dersi, kaynak boşsa kitap / sayfa / soru
+      const book = u.bookRef ? st.data.books?.find((b) => b.id === u.bookRef!.bookId) : undefined
       st.addMistakeNote({
-        subjectId: u.subjectId,
+        subjectId: u.subjectId || book?.subjectId || '',
         topicId: u.topicId,
         text: u.note,
         kind: u.usedSolution ? 'cozum' : u.myAnswer === 'Boş' ? 'bos' : 'bilgi',
         resolved: false,
         date: todayKey(),
-        source: u.source,
+        source: u.source || (book ? bookSource(book.title, u.bookRef?.page, u.bookRef?.question) : undefined),
+        bookRef: book ? u.bookRef : undefined,
         correctAnswer: u.correctAnswer,
         myAnswer: u.myAnswer,
         usedSolution: u.usedSolution,

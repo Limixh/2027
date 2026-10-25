@@ -636,7 +636,7 @@ export const useStore = create<Store>((set, get) => {
     },
     deleteBook(id) {
       const b = get().data.books?.find((x) => x.id === id)
-      if (b) void window.api?.books?.remove(b.rel)
+      if (b?.rel) void window.api?.books?.remove(b.rel)
       mutate((d) => ({ ...d, books: (d.books ?? []).filter((x) => x.id !== id) }))
     },
 

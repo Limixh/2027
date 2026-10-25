@@ -37,6 +37,10 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   .tabs button.on { background:var(--accent); color:#fff; }
   .thumbs .n { position:absolute; left:4px; bottom:4px; min-width:20px; padding:0 5px; border-radius:6px; background:rgba(0,0,0,.6); color:#fff; font-size:11px; line-height:18px; text-align:center; }
   [hidden] { display:none !important; }
+  .bookrow { display:flex; gap:8px; }
+  .bookrow select { flex:1; min-width:0; }
+  .bookrow input { width:78px; flex:none; }
+  #bookPage, #bookQ, #bPage { text-align:center; }
 </style>
 </head>
 <body>
@@ -62,6 +66,10 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
 
     <label class="t">Ortak bilgiler (isteğe bağlı)</label>
     <select id="bSubject"><option value="">Ders (hepsi aynı dersse seç)</option></select>
+    <div class="bookrow" style="margin-top:8px">
+      <select id="bBook"><option value="">Kitap (hepsi aynı kitaptansa)</option></select>
+      <input id="bPage" type="text" inputmode="numeric" placeholder="Sayfa" />
+    </div>
     <div style="height:8px"></div>
     <input id="bSource" type="text" placeholder="Kaynak (ör. 3D TYT Deneme 4)" />
   </div>
@@ -90,6 +98,11 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   <select id="subject"><option value="">Ders seç (sonra da seçebilirsin)</option></select>
   <div style="height:8px"></div>
   <select id="topic" disabled><option value="">Konu (isteğe bağlı)</option></select>
+  <div class="bookrow" style="margin-top:8px">
+    <select id="book"><option value="">Kitap (isteğe bağlı)</option></select>
+    <input id="bookPage" type="text" inputmode="numeric" placeholder="Sayfa" />
+    <input id="bookQ" type="text" inputmode="numeric" placeholder="Soru" />
+  </div>
 
   <label class="t">Cevaplar (isteğe bağlı)</label>
   <div class="row">
@@ -132,10 +145,30 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
     });
   }
 
+  var books = [];
+  function fillBooks(sel) {
+    books.forEach(function (b) { var o = document.createElement('option'); o.value = b.id; o.textContent = b.title; sel.appendChild(o); });
+    sel.closest('.bookrow').hidden = !books.length;
+  }
+  // Kitap seçilince ders boşsa kitabın dersi seçilir
+  function bookPicked(bookSel, subjSel, after) {
+    bookSel.addEventListener('change', function () {
+      var b = books.find(function (x) { return x.id === bookSel.value; });
+      if (b && b.subjectId && !subjSel.value) { subjSel.value = b.subjectId; if (after) after(); }
+    });
+  }
+
   fetch('/api/catalog?t=' + encodeURIComponent(t)).then(function (r) { return r.json(); }).then(function (c) {
-    catalog = c;
-    fillSubjects(subjectSel, c);
-    fillSubjects($('bSubject'), c);
+    // Eski biçim: yalnızca ders listesi; yeni biçim: { subjects, books }
+    catalog = Array.isArray(c) ? c : c.subjects;
+    books = Array.isArray(c) ? [] : (c.books || []);
+    fillSubjects(subjectSel, catalog);
+    fillSubjects($('bSubject'), catalog);
+    fillBooks($('book'));
+    fillBooks($('bBook'));
+    bookPicked($('book'), subjectSel, fillTopics);
+    bookPicked($('bBook'), $('bSubject'));
+    if (last.bookId && books.some(function (b) { return b.id === last.bookId; })) { $('book').value = last.bookId; $('bBook').value = last.bookId; }
     if (last.subjectId) { subjectSel.value = last.subjectId; fillTopics(); }
   }).catch(function () { show('Bağlantı kurulamadı. Bilgisayardaki QR kodu yeniden okut.', true); });
 
@@ -221,18 +254,20 @@ export const PHONE_PAGE = /* html */ `<!doctype html>
   }
 
   function sendSingle() {
-    var body = { subjectId: subjectSel.value, topicId: topicSel.value, note: $('note').value, source: $('source').value, question: state.q, attempt: state.a, correctAnswer: $('correct').value, myAnswer: $('mine').value, usedSolution: $('help').value === 'sol', usedHint: $('help').value === 'hint', hintSeen: $('help').value === 'hint' ? $('hint').value : '' };
-    try { localStorage.setItem('yks-phone-last', JSON.stringify({ subjectId: subjectSel.value })); } catch (e) {}
+    var body = { subjectId: subjectSel.value, topicId: topicSel.value, note: $('note').value, source: $('source').value, question: state.q, attempt: state.a, correctAnswer: $('correct').value, myAnswer: $('mine').value, usedSolution: $('help').value === 'sol', usedHint: $('help').value === 'hint', hintSeen: $('help').value === 'hint' ? $('hint').value : '', bookId: $('book').value, bookPage: $('bookPage').value, bookQuestion: $('bookQ').value };
+    try { localStorage.setItem('yks-phone-last', JSON.stringify({ subjectId: subjectSel.value, bookId: $('book').value })); } catch (e) {}
     return post(body).then(function (j) {
       show('Gönderildi ✓ Bilgisayarda Hata Defteri\\'ne düştü (' + j.received + '). Sıradaki soruyu ekleyebilirsin.', false);
-      state.q = []; state.a = []; $('note').value = ''; $('correct').value = ''; $('mine').value = ''; $('help').value = ''; $('hint').value = ''; $('hint').style.display = 'none';
+      // Kitap ve sayfa sıradaki soru için kalır, soru numarası temizlenir
+      state.q = []; state.a = []; $('note').value = ''; $('correct').value = ''; $('mine').value = ''; $('help').value = ''; $('hint').value = ''; $('hint').style.display = 'none'; $('bookQ').value = '';
     });
   }
 
   // Toplu: her fotoğraf ayrı istek (büyük tek istek yerine; yarıda kesilirse gönderilmeyenler telefonda kalır)
   function sendBulk() {
     var total = state.b.length, sent = 0;
-    var common = { subjectId: $('bSubject').value, source: $('bSource').value, bulk: true };
+    var common = { subjectId: $('bSubject').value, source: $('bSource').value, bulk: true, bookId: $('bBook').value, bookPage: $('bPage').value };
+    try { localStorage.setItem('yks-phone-last', JSON.stringify({ subjectId: subjectSel.value, bookId: $('bBook').value })); } catch (e) {}
     function next() {
       if (!state.b.length) return Promise.resolve();
       sendBtn.textContent = 'Gönderiliyor ' + (sent + 1) + '/' + total + '…';
