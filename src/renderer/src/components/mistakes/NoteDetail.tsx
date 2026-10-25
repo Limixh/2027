@@ -338,7 +338,11 @@ export function NoteDetail({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
         <Select
           value={note.kind}
-          onChange={(e) => update(id, { kind: e.target.value as MistakeKind })}
+          onChange={(e) => {
+            const kind = e.target.value as MistakeKind
+            // "Çözüme bakarak yaptım" türü, çözüme bakma işaretiyle birlikte değişir
+            update(id, { kind, usedSolution: kind === 'cozum' ? true : note.kind === 'cozum' ? undefined : note.usedSolution })
+          }}
           className="!h-7 !w-auto !py-0 text-xs"
           aria-label="Hata türü"
         >

@@ -481,7 +481,7 @@ export const useStore = create<Store>((set, get) => {
           let idx = it.id ? skills.findIndex((s) => s.id === it.id) : -1
           if (idx < 0) idx = skills.findIndex((s) => fold(s.name) === fold(name))
           // Öğrenci yalnızca çözemediği soruları ekler; çözüme bakılan soruda hiçbir beceri "başarı" sayılmaz
-          const helped = note.usedSolution || note.kind === 'cozum'
+          const helped = !!note.usedSolution
           let kind: SkillEvidence['kind'] = it.role === 'basari' || it.role === 'kullandi' ? 'basari' : it.role === 'zayif' ? 'zayif' : 'eksik'
           if (kind === 'basari' && helped) kind = 'zayif'
           // Aynı not için aynı beceriye ikinci kez kanıt yazma (yeniden analizde)

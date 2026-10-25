@@ -8,7 +8,8 @@ import { memoryForPrompt } from './brain'
 import { maybeConsolidate } from './brainSync'
 import { useStore } from './store'
 
-const KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos', 'cozum']
+/** AI'nin atayabileceği hata türleri; "çözüme bakarak" yalnızca öğrencinin kendi işaretinden gelir */
+const AI_KINDS: MistakeKind[] = ['bilgi', 'dikkat', 'sure', 'yorum', 'bos']
 
 /** Toplu analize uygun: ders seçilmiş, görseli ya da metni olan, henüz analiz edilmemiş, gelen kutusunda olmayan */
 export const notesToAnalyze = (notes: MistakeNote[]): MistakeNote[] =>
@@ -29,7 +30,7 @@ export async function analyzeNote(id: string, onText?: (full: string) => void): 
       note: note.text || undefined,
       correctAnswer: note.correctAnswer,
       myAnswer: note.myAnswer,
-      usedSolution: note.usedSolution || note.kind === 'cozum',
+      usedSolution: note.usedSolution,
       usedHint: note.usedHint,
       hintSeen: note.hintSeen,
       comments: note.comments,
@@ -42,7 +43,8 @@ export async function analyzeNote(id: string, onText?: (full: string) => void): 
   const patch: Partial<MistakeNote> = { aiAnalysis: body, aiAnalyzedAt: new Date().toISOString(), aiModel: model }
   const cur = useStore.getState().data.mistakeNotes.find((m) => m.id === id)
   if (meta && cur) {
-    if (meta.kind && (KINDS as string[]).includes(meta.kind)) patch.kind = meta.kind as MistakeKind
+    // Öğrenci çözüme baktıysa tür "çözüme bakarak" kalır; değilse AI'nin bulduğu tür
+    if (!cur.usedSolution && meta.kind && (AI_KINDS as string[]).includes(meta.kind)) patch.kind = meta.kind as MistakeKind
     if (meta.lesson && !cur.lesson) patch.lesson = meta.lesson
     if (!cur.topicId && meta.topic) {
       const t = resolveTopic(cur.subjectId, meta.topic)

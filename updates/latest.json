@@ -1,8 +1,8 @@
 {
-  "version": "1.10.0",
-  "file": "app-1.10.0.json.gz",
-  "sha256": "ab3b6ddbdf32eb0e2e95aa7a1bb741461b5d7a4098e3db840796f75c58977fa5",
+  "version": "1.10.1",
+  "file": "app-1.10.1.json.gz",
+  "sha256": "b360f183f92a0eeab6c0d4d3f8b430a71a08fdb48088c1225d6b60e112dfea3d",
   "minShell": "1.1.0",
-  "notes": "Kitaplar: PDF isteğe bağlı; soru eklerken (telefon dahil) kitap, sayfa ve soru no seçilir; kitap istatistikleri ve Hata Defteri'nde kitap filtresi",
+  "notes": "İkinci Beyin: AI artık soruyu kendiliğinden 'çözüme bakarak' işaretlemiyor; beceriler zorlama bağlanmıyor",
   "date": "2026-10-25"
 }

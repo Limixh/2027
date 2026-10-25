@@ -18,12 +18,12 @@ function prompt(noteId: string): string {
   const n = d.mistakeNotes.find((m) => m.id === noteId)!
   const memory = memoryForPrompt(d, { subjectId: n.subjectId, topicId: n.topicId })
   return `Aşağıda öğrencinin yanlış yaptığı bir ${SUBJECT_MAP[n.subjectId]?.name ?? ''}${n.topicId ? ` (${TOPIC_MAP[n.topicId]?.name})` : ''} sorusunun daha önce yapılmış analizi var. Bu analize göre sorunun gerektirdiği 1-4 temel beceriyi çıkar.
-${n.usedSolution || n.kind === 'cozum' ? 'Öğrenci bu soruyu çözüme bakarak yaptı: hiçbir adım onun başarısı sayılmaz (basari yazma).\n' : n.usedHint ? `Öğrenci yalnızca bir ipucuna bakıp gerisini kendisi yaptı${n.hintSeen ? ` (gördüğü: "${n.hintSeen}")` : ''}: ipucundaki fikir eksik, sonrasında kendi doğru yaptıkları basari olabilir.\n` : ''}${n.comments?.length ? `Öğrencinin yorumları:\n${n.comments.map((c) => `- ${c.text}`).join('\n')}\n` : ''}
+${n.usedSolution ?'Öğrenci bu soruyu çözüme bakarak yaptı: hiçbir adım onun başarısı sayılmaz (basari yazma).\n' : n.usedHint ? `Öğrenci yalnızca bir ipucuna bakıp gerisini kendisi yaptı${n.hintSeen ? ` (gördüğü: "${n.hintSeen}")` : ''}: ipucundaki fikir eksik, sonrasında kendi doğru yaptıkları basari olabilir.\n` : ''}${n.comments?.length ? `Öğrencinin yorumları:\n${n.comments.map((c) => `- ${c.text}`).join('\n')}\n` : ''}
 <analiz>
 ${(n.aiAnalysis ?? '').slice(0, 6000)}
 </analiz>
 ${memory ? `\n<ogrencinin_beceri_hafizasi>\n${memory}\n</ogrencinin_beceri_hafizasi>\n` : ''}
-Kurallar: Beceri adı KONUDAN BAĞIMSIZ ve yeniden kullanılabilir olsun (ör. "Denklem sisteminde yok etme yöntemi"). Hafızada aynı ya da çok yakın beceri varsa yeni ad uydurma; onun id'sini ve adını aynen kullan. Bu sorular öğrencinin kendi başına ÇÖZEMEDİĞİ sorulardır. role: yapamadığı adım = eksik, zorlandığı/çözüme bakarak geçtiği = zayif; basari yalnızca öğrencinin kendi denemesinde açıkça kendi başına doğru yaptığı adım için.
+Kurallar: Beceri adı KONUDAN BAĞIMSIZ ve yeniden kullanılabilir olsun (ör. "Denklem sisteminde yok etme yöntemi"). Hafızadaki bir beceriyi yalnızca bu sorudaki adım gerçekten aynı düşünce adımıysa kullan (id'sini ve adını aynen yaz); sadece benzer / ilişkili ise yamama, isabetli adlı yeni bir beceri aç. Bu sorular öğrencinin kendi başına ÇÖZEMEDİĞİ sorulardır. role: yapamadığı adım = eksik, zorlandığı/çözüme bakarak geçtiği = zayif; basari yalnızca öğrencinin kendi denemesinde açıkça kendi başına doğru yaptığı adım için.
 Yalnızca şu JSON'u yaz, başka hiçbir şey yazma:
 {"skills":[{"id":"hafızadaki id ya da boş","name":"...","role":"eksik|zayif|basari","detail":"bu soruda rolü","description":"yeni beceriyse kısa tanım","area":"genel alan, ör. Cebir / Olasılık / Paragraf"}]}`
 }

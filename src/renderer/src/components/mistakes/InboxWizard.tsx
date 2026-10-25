@@ -87,7 +87,7 @@ function InboxForm({
   const [myAnswer, setMyAnswer] = useState(note.myAnswer ?? '')
   const [help, setHelp] = useState<'none' | 'hint' | 'sol'>(note.usedSolution ? 'sol' : note.usedHint ? 'hint' : 'none')
   const [hintSeen, setHintSeen] = useState(note.hintSeen ?? '')
-  const [kind, setKind] = useState<MistakeKind>(note.kind)
+  const [kind, setKind] = useState<MistakeKind>(note.kind === 'cozum' && !note.usedSolution ? 'bilgi' : note.kind)
   const [text, setText] = useState(note.text)
   const [aImgs, setAImgs] = useState<ChatAttachment[]>(note.attemptImages ?? [])
   const [bookRef, setBookRef] = useState(note.bookRef ?? (sticky.bookRef ? { bookId: sticky.bookRef.bookId, page: sticky.bookRef.page } : undefined))
