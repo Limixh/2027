@@ -19,6 +19,7 @@ import Room from './pages/Room'
 import Practice from './pages/Practice'
 import Brain from './pages/Brain'
 import Books from './pages/Books'
+import Tree from './pages/Tree'
 
 const PAGES = {
   dashboard: Dashboard,
@@ -33,7 +34,8 @@ const PAGES = {
   room: Room,
   practice: Practice,
   brain: Brain,
-  books: Books
+  books: Books,
+  tree: Tree
 }
 
 function useTheme(): void {

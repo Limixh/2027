@@ -1,8 +1,8 @@
 {
-  "version": "1.10.1",
-  "file": "app-1.10.1.json.gz",
-  "sha256": "b360f183f92a0eeab6c0d4d3f8b430a71a08fdb48088c1225d6b60e112dfea3d",
+  "version": "1.11.0",
+  "file": "app-1.11.0.json.gz",
+  "sha256": "b6e701b4638a9832c8ac1cb09dd55d1fa52c615cf0a2e2a9c3abf0a44bbc0cd6",
   "minShell": "1.1.0",
-  "notes": "İkinci Beyin: AI artık soruyu kendiliğinden 'çözüme bakarak' işaretlemiyor; beceriler zorlama bağlanmıyor",
-  "date": "2026-10-25"
+  "notes": "Konu Ağacı: konuları yetenek ağacı gibi gör, ilerledikçe dallar dolsun, XP ve seviye kazan",
+  "date": "2026-10-27"
 }
