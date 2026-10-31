@@ -1,8 +1,8 @@
 {
-  "version": "1.11.0",
-  "file": "app-1.11.0.json.gz",
-  "sha256": "b6e701b4638a9832c8ac1cb09dd55d1fa52c615cf0a2e2a9c3abf0a44bbc0cd6",
+  "version": "1.12.0",
+  "file": "app-1.12.0.json.gz",
+  "sha256": "cf98f316c179b3cb883df0d17d4ecea3620a3052640e39e7cdf3c892a3e70c8e",
   "minShell": "1.1.0",
-  "notes": "Konu Ağacı: konuları yetenek ağacı gibi gör, ilerledikçe dallar dolsun, XP ve seviye kazan",
-  "date": "2026-10-27"
+  "notes": "Paragraf modu: paragraf ve anlam sorularında soru tipi, arada kalınan şıklar, süre ve neden o şık alanları (boş bırakılanı AI belirler); kanıt cümlesi ve tuzak odaklı AI analizi; metin üstünde çözüm (kanıt vurgulu, şıklar adım adım elenir); paragraf becerileri tuzak / strateji üzerinden İkinci Beyin'e işlenir; Hata Analizi'nde paragraf kartı (soru tipine göre doğruluk, süre, en sık tuzak).",
+  "date": "2026-10-31"
 }

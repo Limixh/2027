@@ -187,6 +187,8 @@ export function splitNoteMeta(text: string): {
   meta: {
     topic?: string
     kind?: string
+    qType?: string
+    trap?: string
     summary?: string
     lesson?: string
     skills?: { id?: string; name: string; role?: string; detail?: string; description?: string; area?: string }[]

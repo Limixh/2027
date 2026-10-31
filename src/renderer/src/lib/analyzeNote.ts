@@ -5,6 +5,7 @@ import { SUBJECT_MAP, TOPIC_MAP } from '@/data/curriculum'
 import { TUTOR_SYSTEM, analysisPrompt, askAiWithModel, splitNoteMeta } from './aiRunner'
 import { resolveTopic } from './aiActions'
 import { memoryForPrompt } from './brain'
+import { isParagraphNote, isQType, isTrap, paragraphPrompt } from './paragraph'
 import { maybeConsolidate } from './brainSync'
 import { useStore } from './store'
 
@@ -21,9 +22,12 @@ export async function analyzeNote(id: string, onText?: (full: string) => void): 
   const subject = SUBJECT_MAP[note.subjectId]
   const topic = note.topicId ? TOPIC_MAP[note.topicId] : undefined
   const imgs = [...(note.questionImages ?? []), ...(note.attemptImages ?? [])]
+  const memory = memoryForPrompt(useStore.getState().data, { subjectId: note.subjectId, topicId: note.topicId }) || undefined
+  // Paragraf / anlam sorusu: kanıt cümlesi ve tuzak odaklı ayrı analiz
+  const para = isParagraphNote(note)
   const { text: full, model } = await askAiWithModel({
     system: TUTOR_SYSTEM,
-    prompt: analysisPrompt({
+    prompt: para ? paragraphPrompt({ note, memory }) : analysisPrompt({
       subject: subject?.name ?? 'YKS',
       topic: topic?.name,
       hasAttempt: (note.attemptImages?.length ?? 0) > 0,
@@ -34,7 +38,7 @@ export async function analyzeNote(id: string, onText?: (full: string) => void): 
       usedHint: note.usedHint,
       hintSeen: note.hintSeen,
       comments: note.comments,
-      memory: memoryForPrompt(useStore.getState().data, { subjectId: note.subjectId, topicId: note.topicId }) || undefined
+      memory
     }),
     attachments: imgs.length ? imgs : undefined,
     onText
@@ -51,6 +55,13 @@ export async function analyzeNote(id: string, onText?: (full: string) => void): 
       if (t) patch.topicId = t
     }
     if (meta.summary && !cur.text.trim()) patch.text = meta.summary
+    if (para) {
+      // Öğrencinin seçtiği soru tipi / tuzak korunur; boşsa ya da AI'nin önceki tahminiyse AI'nin bulduğu yazılır
+      const p = { ...cur.paragraph }
+      if (isQType(meta.qType) && (!p.qType || p.qTypeAuto)) Object.assign(p, { qType: meta.qType, qTypeAuto: true })
+      if (isTrap(meta.trap) && (!p.trap || p.trapAuto)) Object.assign(p, { trap: meta.trap, trapAuto: true })
+      patch.paragraph = p
+    }
   }
   useStore.getState().updateMistakeNote(id, patch)
   // (konu güncellendikten sonra) İkinci Beyin: becerileri hafızaya işle (farklı konulardaki aynı beceri burada buluşur)

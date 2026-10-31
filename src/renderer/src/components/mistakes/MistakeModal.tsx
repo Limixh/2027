@@ -9,7 +9,9 @@ import { SUBJECTS, SUBJECT_MAP } from '@/data/curriculum'
 import { MISTAKE_KIND_COLOR, MISTAKE_KIND_LABEL } from '@/lib/exam'
 import { addDays, todayKey } from '@/lib/date'
 import { useStore } from '@/lib/store'
+import { paragraphFieldsFor } from '@/lib/paragraph'
 import { ImagePicker } from './ImagePicker'
+import { ParagraphFields, cleanParagraph } from './ParagraphFields'
 
 export const HELP_OPTIONS: { id: 'none' | 'hint' | 'sol'; label: string; title: string }[] = [
   { id: 'none', label: 'Kendim denedim', title: 'Çözüme bakmadım, çözemedim / yanlış yaptım' },
@@ -63,6 +65,8 @@ export function MistakeModal({
   const [pasteTo, setPasteTo] = useState<'q' | 'a'>('q')
   const [bookRef, setBookRef] = useState(note?.bookRef)
   const [picker, setPicker] = useState(false)
+  const [paragraph, setParagraph] = useState(note?.paragraph)
+  const showPara = paragraphFieldsFor(subjectId, topicId || undefined) || !!note?.paragraph
   const hasImg = qImgs.length > 0 || aImgs.length > 0
 
   const save = (): void => {
@@ -86,7 +90,8 @@ export function MistakeModal({
       hintSeen: help === 'hint' ? hintSeen.trim() || undefined : undefined,
       questionImages: qImgs.length ? qImgs : undefined,
       attemptImages: aImgs.length ? aImgs : undefined,
-      bookRef
+      bookRef,
+      paragraph: showPara ? cleanParagraph(paragraph) : undefined
     }
     if (note) {
       update(note.id, { ...payload, inbox: false })
@@ -261,6 +266,8 @@ export function MistakeModal({
             )}
           </div>
         </div>
+
+        {showPara && <ParagraphFields value={paragraph} onChange={setParagraph} topicId={topicId || undefined} myAnswer={myAnswer} />}
 
         <Field label={hasImg ? 'Not (isteğe bağlı)' : 'Soru / hata açıklaması'} hint={tried && !text.trim() && !hasImg ? undefined : 'Soruyu veya neyi yanlış yaptığını kısaca yaz.'}>
           <Textarea

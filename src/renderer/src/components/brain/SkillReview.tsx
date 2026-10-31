@@ -34,7 +34,11 @@ function reviewPrompt(s: SkillRow, all: SkillRow[]): string {
   return `Öğrencim bu BECERİYİ tekrar ediyor: "${s.name}"${s.description ? ` — ${s.description}` : ''}
 Durumu: ${STATUS_LABEL[s.strength.status]} (${s.strength.score}/100).${where ? `\nBu beceri şu konularda karşısına çıktı: ${where}` : ''}${ev ? `\nDaha önce tam olarak nerede takıldı:\n${ev}` : ''}${roots.length ? `\nDayandığı ve henüz oturmamış temel beceriler: ${roots.join(', ')} (soruların bunları da biraz yoklasın).` : ''}
 
-Bu beceriyi doğrudan ölçen ${COUNT} YENİ soru yaz. YKS (ÖSYM) tarzı, 5 seçenekli (A-E). Birincisi orta, ikincisi biraz daha zor olsun.${where.includes(',') || groupTopics(s).length > 1 ? ' Mümkünse iki soru FARKLI konulardan olsun ki beceri iki kılıkta görülsün.' : ''} Takıldığı noktaları hedefle ama soruda ipucu verme. Kısa tut.
+Bu beceriyi doğrudan ölçen ${COUNT} YENİ soru yaz. YKS (ÖSYM) tarzı, 5 seçenekli (A-E). Birincisi orta, ikincisi biraz daha zor olsun.${where.includes(',') || groupTopics(s).length > 1 ? ' Mümkünse iki soru FARKLI konulardan olsun ki beceri iki kılıkta görülsün.' : ''} Takıldığı noktaları hedefle ama soruda ipucu verme. Kısa tut.${
+    s.area === 'Paragraf'
+      ? '\nBu bir okuma / paragraf becerisi: her soru için kısa (4-6 cümlelik) ÖZGÜN bir paragraf yaz ve şıklardan birini öğrencinin daha önce düştüğü AYNI TUZAK türünde (ör. metinde geçen ama soruya cevap olmayan, kapsamı aşan, metnin tersini söyleyen) çeldirici olarak kur. Çözümde kanıt cümlesini tırnak içinde göster ve tuzak şıkkın neden çekici ama yanlış olduğunu söyle.'
+      : ''
+  }
 
 Biçim (kesinlikle uy):
 ### Soru 1

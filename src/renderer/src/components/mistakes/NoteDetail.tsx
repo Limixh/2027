@@ -17,6 +17,68 @@ import { KINDS } from './MistakeModal'
 import { NoteImage } from './NoteImage'
 import { FollowUps } from './FollowUps'
 import { BoardPanel } from '@/components/board/BoardPanel'
+import { ReadingPanel } from './ReadingPanel'
+import { QTYPE_LABEL, TRAP_HINT, TRAP_LABEL, fmtSeconds, isParagraphNote, noteQType } from '@/lib/paragraph'
+import type { ParaQType, ParaTrap } from '../../../../shared/types'
+
+/** Paragraf sorusunun tipi, tuzağı (AI ya da öğrenci), arada kalınan şıklar ve süre; tip ve tuzak elle düzeltilebilir */
+function ParagraphMeta({ note }: { note: MistakeNote }): React.JSX.Element {
+  const update = useStore((s) => s.updateMistakeNote)
+  const p = note.paragraph ?? {}
+  const q = noteQType(note)
+  const set = (patch: Partial<NonNullable<MistakeNote['paragraph']>>): void => update(note.id, { paragraph: { ...p, ...patch } })
+  const auto = <span className="ml-1 rounded bg-surface-3 px-1 text-[9px] font-semibold uppercase tracking-wide text-subtle">AI</span>
+  return (
+    <div className="rounded-xl border border-border bg-surface-2/50 px-3.5 py-2.5 text-xs text-muted">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <label className="inline-flex items-center gap-1.5">
+          Soru tipi
+          <Select
+            value={p.qType ?? ''}
+            onChange={(e) => set({ qType: (e.target.value || undefined) as ParaQType | undefined, qTypeAuto: undefined })}
+            className="!h-7 !w-auto !py-0 text-xs"
+          >
+            <option value="">{q ? `${QTYPE_LABEL[q]} (konudan)` : 'Analizde belirlenir'}</option>
+            {(Object.keys(QTYPE_LABEL) as ParaQType[]).map((k) => (
+              <option key={k} value={k}>
+                {QTYPE_LABEL[k]}
+              </option>
+            ))}
+          </Select>
+          {p.qTypeAuto && auto}
+        </label>
+        <label className="inline-flex items-center gap-1.5">
+          Tuzak
+          <Select
+            value={p.trap ?? ''}
+            onChange={(e) => set({ trap: (e.target.value || undefined) as ParaTrap | undefined, trapAuto: undefined })}
+            className="!h-7 !w-auto !py-0 text-xs"
+          >
+            <option value="">Analizde belirlenir</option>
+            {(Object.keys(TRAP_LABEL) as ParaTrap[]).map((k) => (
+              <option key={k} value={k}>
+                {TRAP_LABEL[k]}
+              </option>
+            ))}
+          </Select>
+          {p.trapAuto && auto}
+        </label>
+        {p.between?.length ? (
+          <span>
+            Arada kaldım: <b className="text-text">{p.between.join(' – ')}</b>
+          </span>
+        ) : null}
+        {p.seconds ? (
+          <span>
+            Süre: <b className={cn('tabular', p.seconds > 90 ? 'text-warning' : 'text-text')}>{fmtSeconds(p.seconds)}</b>
+          </span>
+        ) : null}
+      </div>
+      {p.why && <p className="mt-1.5 text-text">“{p.why}”</p>}
+      {p.trap && TRAP_HINT[p.trap] && <p className="mt-1.5 text-[11px] text-muted">İpucu: {TRAP_HINT[p.trap]}</p>}
+    </div>
+  )
+}
 
 const Md = ({ children }: { children: string }): React.JSX.Element => (
   <div className="prose-ai">
@@ -176,6 +238,7 @@ export function NoteDetail({
   const today = todayKey()
   const due = !!note.nextReview && note.nextReview <= today && !note.resolved
   const hasQ = (note.questionImages?.length ?? 0) > 0
+  const para = isParagraphNote(note)
 
   const analyze = async (): Promise<void> => {
     if (busy.current) return
@@ -334,6 +397,8 @@ export function NoteDetail({
           )}
         </div>
       )}
+
+      {para && <ParagraphMeta note={note} />}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
         <Select
@@ -544,7 +609,13 @@ export function NoteDetail({
           )}
         </Section>
 
-        {boardOn && (
+        {para && (
+          <Section title="Metin üstünde çözüm">
+            <ReadingPanel note={note} />
+          </Section>
+        )}
+
+        {boardOn && !para && (
           <Section title="Tahtada çözüm">
             <BoardPanel note={note} />
           </Section>

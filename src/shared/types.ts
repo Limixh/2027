@@ -146,6 +146,45 @@ export interface MistakeNote {
   comments?: { id: string; date: string; text: string }[]
   /** Bu soruyla ilişkili beceriler (İkinci Beyin) */
   skillIds?: string[]
+  /** Paragraf / anlam sorusuna özel bilgiler (Türkçe); soru tipi ve tuzak boşsa AI belirler */
+  paragraph?: ParagraphInfo
+}
+
+/** Paragraf soru tipi */
+export type ParaQType = 'ana' | 'yardimci' | 'cikarim' | 'anlatim' | 'yapi' | 'akis' | 'tamamlama' | 'sozcuk' | 'cumle' | 'diger'
+/** Paragraf tuzağı: seçilen yanlış şıkkın neden çekici geldiği */
+export type ParaTrap = 'cevapdegil' | 'genelleme' | 'disari' | 'kismen' | 'ters' | 'olumsuz' | 'okuma' | 'diger'
+
+export interface ParagraphInfo {
+  qType?: ParaQType
+  /** soru tipini AI belirlediyse true (öğrenci seçerse kalkar) */
+  qTypeAuto?: boolean
+  trap?: ParaTrap
+  trapAuto?: boolean
+  /** arada kaldığı şıklar (ör. ['B','D']) */
+  between?: string[]
+  /** neden o şıkkı seçtiğini kendi sözleriyle */
+  why?: string
+  /** soruya harcadığı süre (saniye) */
+  seconds?: number
+  /** Metin üstünde çözüm */
+  reading?: ParaReading
+}
+
+export interface ParaReading {
+  /** paragrafın metni (görselden aktarılmış) */
+  passage: string
+  /** soru kökü */
+  stem?: string
+  /** cevabı kanıtlayan cümle(ler), paragraftan aynen */
+  evidence: string[]
+  /** tuzak şıkkın dayandığı ama soruya cevap olmayan ifadeler, paragraftan aynen */
+  decoys?: string[]
+  options: { letter: string; text?: string; correct: boolean; reason: string; trap?: ParaTrap }[]
+  /** adım adım okuma: 2-5 kısa adım */
+  steps?: string[]
+  model?: string
+  createdAt: string
 }
 
 /** Kitaplıktaki soru bankası: PDF'li ya da yalnızca basılı (bilgi olarak) */

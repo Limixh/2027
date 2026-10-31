@@ -5,6 +5,7 @@ import { InsightsCard } from '@/components/analysis/Insights'
 import { KindDonut } from '@/components/analysis/KindDonut'
 import { MistakeTreemap } from '@/components/analysis/MistakeTreemap'
 import { PracticeAccuracy } from '@/components/analysis/PracticeAccuracy'
+import { ParagraphCard } from '@/components/analysis/ParagraphCard'
 import { PriorityList } from '@/components/analysis/PriorityList'
 import { SubjectTable } from '@/components/analysis/SubjectTable'
 import { TrendGrid } from '@/components/analysis/TrendGrid'
@@ -66,6 +67,9 @@ export default function Analysis(): React.JSX.Element {
     return (
       <div>
         {header}
+        <div className="mb-5 empty:hidden">
+          <ParagraphCard />
+        </div>
         <Card>
           <EmptyState
             className="py-20"
@@ -193,6 +197,10 @@ export default function Analysis(): React.JSX.Element {
         <div className="xl:col-span-5">
           <PracticeAccuracy items={practice} />
         </div>
+      </div>
+
+      <div className="mt-5 empty:hidden">
+        <ParagraphCard />
       </div>
 
       <p className="mt-6 flex items-center justify-center gap-1.5 text-center text-[11px] text-subtle">

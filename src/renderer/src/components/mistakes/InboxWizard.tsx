@@ -11,6 +11,8 @@ import { ImagePicker } from './ImagePicker'
 import { NoteImage } from './NoteImage'
 import { BookFields } from '@/components/books/BookFields'
 import { bookSource } from '@/lib/bookStats'
+import { paragraphFieldsFor } from '@/lib/paragraph'
+import { ParagraphFields, cleanParagraph } from './ParagraphFields'
 
 /** Bir sorudan diğerine taşınan alanlar (aynı denemeden gelen sorular genelde aynı ders/kaynak) */
 interface Sticky {
@@ -92,6 +94,8 @@ function InboxForm({
   const [aImgs, setAImgs] = useState<ChatAttachment[]>(note.attemptImages ?? [])
   const [bookRef, setBookRef] = useState(note.bookRef ?? (sticky.bookRef ? { bookId: sticky.bookRef.bookId, page: sticky.bookRef.page } : undefined))
   const [tried, setTried] = useState(false)
+  const [paragraph, setParagraph] = useState(note.paragraph)
+  const showPara = paragraphFieldsFor(subjectId, topicId || undefined) || !!note.paragraph
 
   const save = (): void => {
     setTried(true)
@@ -110,6 +114,7 @@ function InboxForm({
       kind,
       text: text.trim(),
       attemptImages: aImgs.length ? aImgs : undefined,
+      paragraph: showPara ? cleanParagraph(paragraph) : undefined,
       inbox: false
     })
     // Kitap seçiliyse kaynak her soru için kitaptan yazılır; elle yazılan kaynak sonraki soruya taşınır
@@ -228,6 +233,8 @@ function InboxForm({
           {help === 'hint' && (
             <Textarea rows={2} value={hintSeen} onChange={(e) => setHintSeen(e.target.value)} placeholder="Neyi gördün? ör. ortak paranteze alındığını gördüm" />
           )}
+
+          {showPara && <ParagraphFields value={paragraph} onChange={setParagraph} topicId={topicId || undefined} myAnswer={myAnswer} />}
 
           <div>
             <span className="label">Hata türü</span>
